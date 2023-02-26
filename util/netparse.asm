@@ -14,7 +14,10 @@
 ; DE = destination file block
 ; [DD[U]:]FILENAME.TYP - allowing for wildcards in FILENAME.TYP
 ; Default DDU: is "NW0:". Converts unit to binary.
-; Returns: CY on error, A=0 for unambiguous file name
+; Returns: CY on error,or
+; C=A=0 for unambiguous file name (else > 0)
+; HL = delimiter
+; If no filename, fields are 00.
 netparse:
 ;        private void setupFile(String name, byte[] nam) {
 ;                int t = 0;
@@ -145,7 +148,8 @@ ext4:	mov	a,m
 	rc
 break4:	xra	a
 break3:	call	fill
-done:	mov	a,c
+done:	dcx	h	; backup to delimiter
+	mov	a,c
 	ora	a
 	ret
 

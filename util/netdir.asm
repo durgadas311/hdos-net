@@ -21,10 +21,13 @@ start:
 	call	netdev
 	shld	netdrv
 	lhld	args
+	call	scansw
+	mvi	a,EC.IS
+	jc	error
+	lhld	args
 	lxi	d,patn
 	call	netparse
  if DEBUG
-	push	psw
 	mov	a,c
 	call	hexout
 	mvi	a,':'
@@ -32,14 +35,22 @@ start:
 	lxi	h,patn
 	mvi	b,14
 	call	hxd0
-	pop	psw
 	mvi	a,EC.FNR
  else
 	mvi	a,EC.IFN
  endif
 	jc	error
-
-	lxi	h,patn
+	lxi	h,patn+3
+	mov	a,m
+	ora	a
+	jnz	gotit
+	mvi	b,11
+	mvi	a,'?'
+fillq:	mov	m,a
+	inx	h
+	dcr	b
+	jnz	fillq
+gotit:	lxi	h,patn
 loop:
 	lxi	d,dirbuf
 	lda	func
@@ -51,6 +62,9 @@ loop:
 	jmp	error
 ok:	mvi	a,.SERN
 	sta	func
+	lhld	count
+	inx	h
+	shld	count
 	lxi	h,dirbuf
 	mvi	b,11
 nmloop:	mov	a,m
@@ -77,8 +91,14 @@ error:	push	psw
 	pop	psw
 	mvi	h,NL
 	SCALL	.ERROR
-	;jmp	done
-done:	xra	a
+	jmp	exit
+done:	lhld	count
+	mov	a,h
+	ora	l
+	jnz	exit
+	call	$TYPTX
+	db	'No file',ENL
+exit:	xra	a
 	SCALL	.EXIT
 
 nwcall:	push	h
@@ -87,12 +107,44 @@ nwcall:	push	h
 	mvi	a,DC.DSF
 	ret
 
+; scan for switches, replacing any with blanks
+; HL = commandline
+scansw:
+	mov	a,m
+	ora	a
+	rz
+	cpi	'/'
+	jz	ssw0
+	inx	h
+	jmp	scansw
+ssw0:	mvi	m,' '
+	inx	h
+	mov	a,m
+	ani	5fh
+	cpi	'B'	; /BRIEF
+	jz	sswB
+	cpi	'F'	; /FULL
+	jz	sswF
+	; TODO: /SYSTEM /FLAG:f /NOFLAG:f /... ?
+	stc
+	ret
+ssw1:	; TODO: fill with blanks... until ???
+	jmp	scansw
+
+sswB:	sta	brief
+	jmp	ssw1
+sswF:	sta	full
+	jmp	ssw1
+
 func:	db	.SERF
 
 patn:	db	'DD0'
 	db	'FILENAME'
 	db	'TYP'
 
+brief:	db	0
+full:	db	0
+count:	dw	0
 dirbuf:	ds	23
 
 args:	dw	0
