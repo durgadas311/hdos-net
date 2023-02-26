@@ -1,5 +1,7 @@
 ; CP/NET standard message format
 
+NWDVD	equ	'NW'	; The standard name for the driver
+
 	org	0
 FMT	ds	1	; 10 for HDOS request, 11 for response
 DID	ds	1	; destination node ID

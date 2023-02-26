@@ -1,5 +1,7 @@
 ; HDOS-NET DELETE networked file
 ;
+DEBUG	equ	0
+
 	aseg
 	include	ascii.acm
 	include	hosdef.acm
@@ -8,7 +10,7 @@
 	include	hrom.acm
 	include	cpnet.acm
 
-	extrn	netdev
+	extrn	netdev,netparse
 	cseg
 start:
 	lxi	h,0
@@ -19,13 +21,27 @@ start:
 	call	netdev
 	shld	netdrv
 	lhld	args
-	call	parse
+	lxi	d,patn
+	call	netparse
+ if DEBUG
+	push	psw
+	mov	a,c
+	call	hexout
+	mvi	a,':'
+	SCALL	.SCOUT
+	lxi	h,patn
+	mvi	b,14
+	call	hxd0
+	pop	psw
+	mvi	a,EC.FNR
+ else
+	mvi	a,EC.IFN
+ endif
 	jc	error
 
 	lxi	h,patn
-	lxi	d,defblk
 loop:
-	lxi	b,dirbuf
+	lxi	d,dirbuf
 	lda	func
 	mov	c,a
 	call	nwcall
@@ -71,21 +87,42 @@ nwcall:	push	h
 	mvi	a,DC.DSF
 	ret
 
-parse:	; TODO...
-	xra	a
-	ret
-
 func:	db	.SERF
 
-patn:	db	'NW0:????????.???'
-
-defblk:	db	0,0,0
-	db	0,0,0
+patn:	db	'DD0'
+	db	'FILENAME'
+	db	'TYP'
 
 dirbuf:	ds	23
 
 args:	dw	0
 netdrv:	dw	0
+
+ if DEBUG
+hxd0:	mvi	a,' '
+	call	conout
+hxd:	mov	a,m
+	call	hexout
+	inx	h
+	dcr	b
+	jnz	hxd0
+	ret
+
+hexout:	push	psw
+	rlc
+	rlc
+	rlc
+	rlc
+	call	hexdig
+	pop	psw
+hexdig:	ani	0fh
+	adi	90h
+	daa
+	aci	40h
+	daa
+conout:	SCALL	.SCOUT
+	ret
+ endif
 
 	ds	64
 stack:	ds	0

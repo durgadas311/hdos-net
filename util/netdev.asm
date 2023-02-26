@@ -5,8 +5,7 @@
 	include	hosdef.acm
 	include	devdef.acm
 	include	hrom.acm
-
-NWDVD	equ	574eh	; 'NW' not working in zmac
+	include	cpnet.acm
 
 	public	netdev
 	cseg
@@ -16,7 +15,7 @@ NWDVD	equ	574eh	; 'NW' not working in zmac
 netdev:	SCALL	.VERS
 	cpi	30H
 	jnc	hdos3
-	; TODO: get device in HDOS 2.0...
+	; TODO: how to get device in HDOS 2.0...
 	jmp	nonet
 hdos3:	lxi	d,NWDVD
 	SCALL	.GDA
