@@ -39,7 +39,7 @@ loop:	mov	a,m
 	jz	skip
 	inr	c
 	call	$TYPTX
-	db	'  Drive N','W'+200Q
+	db	'  Drive N','W'+200Q	; hard-coded dev name, again
 	mvi	a,8
 	sub	b
 	adi	'0'
@@ -79,10 +79,11 @@ loop0:	inx	h
 	ora	a
 	jnz	done
 	call	$TYPTX
-	db	'  All LOCAL',ENL
+	db	'  None Mapped',ENL
 	jmp	done
 
-netcfg:	call	netdev
+netcfg:	lxi	h,NWDVD	; must hard-code this, else require parameter.
+	call	netdev
 	mvi	c,.NTCFG
 	mvi	a,DC.DSF
 	pchl

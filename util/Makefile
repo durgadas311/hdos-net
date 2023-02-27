@@ -4,7 +4,7 @@
 
 LIBS = netdev.rel netparse.rel
 
-all: netstat.abs netdel.abs netdir.abs
+all: netstat.abs netmap.abs # netdel.abs netdir.abs
 
 %.rel: %.asm
 	zmac -i -c -8 -s -n -I../inc --od . --oo rel,lst $*.asm

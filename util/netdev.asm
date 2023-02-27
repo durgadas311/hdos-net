@@ -10,19 +10,17 @@
 	public	netdev
 	cseg
 
+; HL = device name (e.g. H='W' L='N' for "NW")
 ; Returns: HL = DEV.JMP
 ; Aborts if no network
-netdev:	SCALL	.VERS
-	cpi	30H
-	jnc	hdos3
-	; TODO: how to get device in HDOS 2.0...
-	jmp	nonet
-hdos3:	lxi	d,NWDVD
-	SCALL	.GDA
+netdev:	shld	dev
+	lxi	h,dev
+	SCALL	.LOADD	; HL=AIO.DTA if scucess
 	jc	nonet
-	inx	b
-	inx	b	; DEV.RES
-	ldax	b
+	inx	h
+	inx	h	; DEV.RES
+	mov	a,m
+	inx	h	; DEV.JMP
 	ani	DR.IM
 	jz	nonet
 	ret
@@ -31,3 +29,5 @@ nonet:	call	$TYPTX
 	db	NL,'HDOS/NET has not been loaded','.'+200Q
 done:	xra	a
 	SCALL	.EXIT
+
+dev:	db	'xx:',0
