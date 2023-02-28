@@ -1,0 +1,6 @@
+vhdos_root_dir = /home/drmiller/VHDOS3
+vhdos_drive_dk0 = ${PWD}
+#vhdos_path = sy:dk0:
+vhdos_vers = 0x30
+#vhdos_y2k
+silent
