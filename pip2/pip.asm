@@ -1456,9 +1456,12 @@ DEL5	LHLD	NAMTLEN
 	ORA	L
 	RZ			END OF LIST
 	LXI	H,NAMTAB
+	CALL	DELNET		TRY NETWORK DELETE FIRST
+	JC	NAMERR		ERROR ON DELETE
+	JZ	DEL6		PROCESSED BY NETWORK
 	DB	SYSCALL,.DELET	REMOVE IT
 	JC	NAMERR		ERROR ON DELETE
-	CALL	REN		REMOVE ENTRY FROM NAMTAB
+DEL6	CALL	REN		REMOVE ENTRY FROM NAMTAB
 	JMP	DEL5		DELETE THE NEXT ONE
 	STL	'RENAME - PROCESS RENAME COMMAND'
 	EJECT
@@ -2857,6 +2860,9 @@ EWS	CALL	AEN		TRY TO ENTER IT
 	DB	SYSCALL,.DECODE GET INFORMATION ABOUT DEVICE
 	RC			ERROR
 	LDA	EWSB		SEE IF A DIRECTORY DEVICE
+	ANI	DT.DD+DT.RN
+	CPI	DT.RN
+	JZ	EWSNET
 	ANI	DT.DD
 	MVI	A,EC.DNS		ASSUME DEVICE NOT SUITABLE
 	STC
@@ -3375,6 +3381,61 @@ NAMTMAX DW	0		MAXIMUM SIZE OF NAME TABLE
 	IF	ONECOPY
 NAMTPTR DW	0		POINTER TO ACTIVE ELEMENT IN NAMTAB
 	ENDIF
+
+* HL = fully-qualified filename (always has device prefix).
+* Do a QUICK check for network device, return NZ if not.
+* Else try to pass to network device driver.
+* Return CY on network device error,
+* NZ if not a network device file string.
+DELNET	EQU	*
+*	TODO... doing this brute-force, but performance
+*	is probably not critical. ideally, EWSNET would
+*	store the ambiguoous file spec instead of expanding
+*	it, since the network server handles deletes with
+*	wildcards. But that changes the NAMTAB semantics
+*	and requires more code changes.
+	PUSH	H
+	LXI	B,LSTD
+	DB	SYSCALL,.DECODE
+	LDA	LSTD+0
+	ANI	DT.DD+DT.RN
+	CPI	DT.RN
+	STC
+	CMC			MUST GET NZ and NC
+	JNZ	NDEL1		NOT A NETWORK DEVICE
+	LHLD	LSTD+17		(HL) = DEV TBL ADDR
+	CALL	SETNET		SETUP NET DEV FROM DTA
+	LXI	H,LSTD+1
+	MVI	C,.DELET
+	CALL	NETCALL
+	POP	H
+	RC
+	XRA	A
+	RET
+NDEL1	POP	H
+	RET
+
+* Commands taking wildcards (/COPY, /RENAME, /DELETE) use this
+EWSNET	EQU	*
+	LHLD	EWSB+17		DTA
+	CALL	SETNET		SETUP NET DEV FROM DTA
+*	TODO
+	MVI	C,.SERF
+	LXI	H,PIO.DEV
+NEWS6	LXI	D,PIO.DIR	DE = TARGET DIR ENT
+	CALL	NETCALL		C = OP (SERF/SERN)
+	JC	NEWS9		CHECK EC.EOF
+	LXI	H,PIO.DIR
+	CALL	CFE		CHECK FILE ELIGIBILITY
+	JNE	NEWS7		NOT ELIGIBLE
+	CALL	AEN		ADD TO TABLE
+NEWS7	MVI	C,.SERN
+	JMP	NEWS6
+NEWS9	EQU	*
+	CPI	EC.EOF
+	JNZ	ERROR
+*	TODO
+	RET		RET TO CALLER OF EWS
 
 * /LIST (et al.) on a Networked Device
 *	HL = Device Table Address (DEV.NAM)
