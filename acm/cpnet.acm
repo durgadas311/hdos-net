@@ -1,0 +1,21 @@
+* CP/NET standard message format
+
+NWDVD	EQU	'NW'	; The standard name for the driver
+
+	ORG	0
+FMT	DS	1	; 10 for HDOS request, 11 for response
+DID	DS	1	; destination node ID
+SID	DS	1	; source node ID
+FNC	DS	1	; function to perform
+SIZ	DS	1	; paylod length - 1 (min 1 byte, FF = 256)
+DAT	DS	1	; payload starts here, at least one byte.
+HDRLEN	EQU	DAT
+
+FMT.CPM	EQU	0	; 00/01 for request/response on CP/M
+FMT.HOS	EQU	10H	; 10/11 for request/response on HDOS
+
+* New functions added to HDOS
+.SERF	EQU	17	; Search First (same as CP/M)
+.SERN	EQU	18	; Search Next (same as CP/M)
+* TODO: rest of CP/NET functions? .TASK conflict with LOGOFF
+.NTCFG	EQU	69	; Get NETCFG table (same as CP/NET) [local]
