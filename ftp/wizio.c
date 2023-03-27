@@ -30,7 +30,9 @@ char off;
 	inx	h
 	inx	h
 	mov	a,m	; bsb
-	ani	11111101b	; read op
+	add	a
+	add	a
+	add	a	; read op, bulk xfer
 	out	spi$wr	; cmd
 	in	spi$rd	; dummy
 	in	spi$rd
@@ -60,7 +62,9 @@ char off;
 	inx	h
 	inx	h
 	mov	a,m	; bsb
-	ani	11111101b	; read op
+	add	a
+	add	a
+	add	a	; read op, bulk xfer
 	out	spi$wr	; cmd
 	in	spi$rd	; dummy
 	in	spi$rd
@@ -95,7 +99,9 @@ int len;
 	mov	a,e
 	out	spi$wr	; off(lo)
 	mov	a,m	; bsb
-	ani	11111101b	; read op
+	add	a
+	add	a
+	add	a	; read op, bulk xfer
 	out	spi$wr	; cmd
 	in	spi$rd	; dummy
 	lxi	h,2
@@ -142,7 +148,10 @@ char val;
 	inx	h
 	inx	h
 	mov	a,m	; bsb
-	ori	00000010b	; write op
+	add	a
+	inr	a
+	add	a
+	add	a	; write op, bulk xfer
 	out	spi$wr	; cmd
 	mov	a,c	; val
 	out	spi$wr
@@ -176,7 +185,10 @@ int val;
 	inx	h
 	inx	h
 	mov	a,m	; bsb
-	ori	00000010b	; write op
+	add	a
+	inr	a
+	add	a
+	add	a	; write op, bulk xfer
 	out	spi$wr	; cmd
 	mov	a,b	; val BE
 	out	spi$wr
@@ -210,7 +222,10 @@ int len;
 	mov	a,e
 	out	spi$wr	; off(lo)
 	mov	a,m	; bsb
-	ori	00000010b	; write op
+	add	a
+	inr	a
+	add	a
+	add	a	; write op, bulk xfer
 	out	spi$wr	; cmd
 	lxi	h,2
 	dad	sp
