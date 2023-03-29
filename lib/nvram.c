@@ -42,6 +42,27 @@ cks1:	dcx	b
 	ret
 #endasm
 
+int dcksum(buf)
+char *buf;
+{
+#asm
+	lxi	h,2
+	dad	sp
+	mov	e,m
+	inx	h
+	mov	d,m
+	xchg
+	lxi	d,cks32
+	mvi	b,4
+dck0:	ldax	d
+	mov	m,a
+	inx	d
+	inx	h
+	dcr	b
+	jnz	dck0
+#endasm
+}
+
 /*
  * Verify checksum in 512B block.
  * Returns 0 if OK.
@@ -143,6 +164,7 @@ nvg0:	in	spi$rd
 	xra	a
 	out	spi$ctl
 #endasm
+	return 0;
 }
 
 static wrpage(buf, adr)
@@ -210,4 +232,5 @@ int len;
 		adr += 128;
 		len -= 128;
 	}
+	return 0;
 }

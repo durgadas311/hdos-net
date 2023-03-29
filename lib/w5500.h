@@ -2,11 +2,23 @@
  * WIZnet W5500 chip definitions
  */
 
+/* common register block offsets */
+#define CR_MR	0
+#define CR_GAR	1	/* 4 bytes */
+#define CR_SUBR	5	/* 4 bytes */
+#define CR_SHAR	9	/* 6 bytes */
+#define CR_SIPR	15	/* 4 bytes */
+#define CR_PMAG	29	/* 1 byte */
+
 /* per-socket register offsets */
 #define SN_CR	1	/* command register */
 #define SN_IR	2	/* interrupt register */
 #define SN_SR	3	/* status register */
 #define SN_PRT	4	/* port register */
+#define SN_DIPR	12	/* (4) dest IP register */
+#define SN_DPRT	16	/* (2) dest port register */
+#define SN_KA	47	/* (1) keep alive timeout (W5500) */
+#define SN_KANV	29	/* (1) keep alive timeout (NVRAM) */
 #define SN_TXWR		36
 #define SN_RXRSR	38
 #define SN_RXRD		40
