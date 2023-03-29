@@ -1,6 +1,13 @@
 /*
- * CP/NET operations
+ * CP/NET operations and constants
  */
+
+#define CPN_FMT	0
+#define CPN_DID	1
+#define CPN_SID	2
+#define CPN_FNC	3
+#define CPN_SIZ	4
+#define CPN_DAT	5	/* payload of message, length of hdr */
 
 extern int nwinit(); /* (void) */
 extern int nwdown(); /* (void) */

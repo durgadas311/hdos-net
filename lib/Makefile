@@ -1,6 +1,7 @@
 # An ftp-like utilitiy for HDOS using H8xSPI/WIZnet.
 export HDOSDrive_dk0 = $(PWD)
-export HDOSDrive_dk1 = $(PWD)/../lib
+
+all: wizio.rel nvram.rel
 
 %.mac: %.c
 	vhdos c -m1 dk0:$<

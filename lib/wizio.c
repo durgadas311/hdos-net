@@ -1,14 +1,8 @@
 /*
  * Low-level I/O on WIZnet chips (W5500)
  */
-#asm
-WZSCS	equ	00000001b	; H8xSPI /CS for WIZnet
-spi	equ	40h		; H8xSPI base port
-spi$ctl	equ	spi+1
-spi$rd	equ	spi+0
-spi$wr	equ	spi+0
-#endasm
 
+#include "h8xspi.h"
 #include "w5500.h"
 
 /*

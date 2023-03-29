@@ -2,7 +2,9 @@
  * CP/NET operations on WIZnet (W5500)
  */
 
-#include "w5500.h"
+#include "dk1:wizio.h"
+#include "dk1:w5500.h"
+#include "dk1:cpnet.h"
 
 int nwinit()
 {
@@ -40,7 +42,7 @@ char sid;
 	int port;
 
 	for (bsb = 0; bsb < 0x20; bsb += 0x04) {
-		port = wzget2(bsb, SN_PORT);
+		port = wzget2(bsb, SN_PRT);
 		if ((port >> 8) == 0x31 && (port & 0xff) == sid) {
 			return wzopen(bsb);
 		}

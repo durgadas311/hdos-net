@@ -4,11 +4,11 @@
 
 extern int wzget1(); /* (char bsb, char off) */
 extern int wzget2(); /* (char bsb, char off) */
-extern void wzrd(); /* (char bsb, int off, char *buf, int len) */
+extern wzrd(); /* (char bsb, int off, char *buf, int len) */
 
-extern void wzput1(); /* (char bsb, char off, char val) */
-extern void wzput2(); /* (char bsb, char off, int val) */
-extern void wzwr(); /* (char bsb, int off, char *buf, int len) */
+extern wzput1(); /* (char bsb, char off, char val) */
+extern wzput2(); /* (char bsb, char off, int val) */
+extern wzwr(); /* (char bsb, int off, char *buf, int len) */
 
 extern int wzcmd(); /* (char bsb, char cmd) returns socket SR */
 extern int wzsts(); /* (char bsb, char bits) returns socket IR */
