@@ -11,6 +11,7 @@
 #define CR_PMAG	29	/* 1 byte */
 
 /* per-socket register offsets */
+#define SN_MR	0	/* mode register must be TCP/IP */
 #define SN_CR	1	/* command register */
 #define SN_IR	2	/* interrupt register */
 #define SN_SR	3	/* status register */

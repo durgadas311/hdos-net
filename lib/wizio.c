@@ -294,3 +294,17 @@ char bits;
 	if (to == 0) return -1;
 	return ir;
 }
+
+/*
+ * Close the socket 'bsb'.
+ */
+int wzclose(bsb)
+char bsb;
+{
+	char sr;
+
+	sr = wzget1(bsb, SN_SR);
+	if (sr == SS_CLOSED) return 0;
+	wzcmd(bsb, SC_CLOS);
+	return 0;
+}

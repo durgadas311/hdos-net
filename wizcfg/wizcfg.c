@@ -35,7 +35,24 @@ static int setnv() {
 }
 
 static int wizcfg() {
+	int x, y, z;
+
 	/* configure W5500 from nvbuf[] */
+	wzwr(0, CR_GAR, nvbuf + CR_GAR, 18);
+	wzput1(0, CR_PMAG, nvbuf[CR_PMAG]);
+	z = 1;
+	y = 32;
+	for (x = 0; x < 8; ++x) {
+		if (nvbuf[y + SN_PRT] == 0x31) {
+			wzclose(z);
+			wzput1(z, SN_MR, 1);
+			wzput1(z, SN_KA, nvbuf[y + SN_KANV]);
+			wzwr(z, SN_PRT, nvbuf + y + SN_PRT, 2);
+			wzwr(z, SN_DIPR, nvbuf + y + SN_DIPR, 6);
+		}
+		y += 32;
+		z += 4;
+	}
 	return 0;
 }
 
