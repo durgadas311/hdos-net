@@ -18,7 +18,7 @@ $(VHDOS_SY0)/printf.rel: $(VHDOS_SY0)/printf.mac
 	vhdos m80 =dk0:$*
 
 $(HDOSDrive_dk1)/%.rel: $(HDOSDrive_dk1)/%.c
-	$(MAKE) -C $(HDOSDrive_dk1)
+	cd $(HDOSDrive_dk1); make
 
 wizcfg.abs: wizcfg.rel $(HDOSDrive_dk1)/wizio.rel $(HDOSDrive_dk1)/nvram.rel $(VHDOS_SY0)/printf.rel
 	vhdos l80 dk0:wizcfg,dk1:wizio,dk1:nvram,sy0:printf,sy0:clibrary,dk0:wizcfg/n/e

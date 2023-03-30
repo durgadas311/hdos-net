@@ -14,7 +14,6 @@ int count = 0;
 char nvbuf[512];
 
 static int getnv() {
-	extern int dcksum();
 	if (nvget(nvbuf, 0, 512) != 0) {
 		return 1;
 	}
@@ -25,13 +24,77 @@ static int getnv() {
 }
 
 static int setnv() {
-	if (scksum(nvbuf) != 0) {
-		return 1;
-	}
+	scksum(nvbuf);
 	if (nvput(nvbuf, 0, 512) != 0) {
 		return 1;
 	}
 	return 0;
+}
+
+static setword(off, val)
+int off;
+int val;
+{
+	nvbuf[off] = (val >> 8);
+	nvbuf[off + 1] = val;
+}
+
+static char hxdigit(chr)
+char chr;
+{
+	if (chr >= '0' && chr <= '9') {
+		return chr - '0';
+	} else if (chr >= 'A' && chr <= 'F') {
+		return (chr - 'A') + 10;
+	} else {
+		return 255;
+	}
+}
+
+static char hxbyte(str, end)
+char *str;
+char **end;
+{
+	int x, y, z;
+
+	z = 0;
+	x = 0;
+	while ((y = hxdigit(str[x])) < 16) {
+		z = (z << 4) + y;
+		++x;
+	}
+	if (x > 0) {
+		*end = str + x;
+		return z;
+	}
+	*end = 0;
+	return 0; /* special case - not hex number */
+}
+
+static int isdigit(c)
+char c;
+{
+	return (c >= '0' && c <= '9');
+}
+
+static int dcword(str, end)
+char *str;
+char **end;
+{
+	int x, z;
+
+	z = 0;
+	x = 0;
+	while (isdigit(str[x])) {
+		z = (z * 10) + (str[x] - '0');
+		++x;
+	}
+	if (x > 0) {
+		*end = str + x;
+		return z;
+	}
+	*end = 0;
+	return 0; /* special case - not decimal number */
 }
 
 static int wizcfg() {
@@ -56,29 +119,100 @@ static int wizcfg() {
 	return 0;
 }
 
-static int ipadr(p1)
+static int getip(str, off)
+char *str;
+int off;
+{
+	int x;
+	int y;
+	char *s, *e;
+
+	s = str;
+	for (x = 0; x < 4; ++x) {
+		y = dcword(s, &e);
+		if (e == 0 || y > 255) return 1;
+		if (x == 3) {
+			if (*e != 0) return 1;
+		} else {
+			if (*e != '.') return 1;
+		}
+		nvbuf[off + x] = y;
+		s = e + 1;
+	}
+	return 0;
+}
+
+/* always bsb=0? */
+static int ipadr(p1, reg)
 char *p1;
+char reg;
 {
 	/* parse and set IP addr */
+	if (getip(p1, reg) != 0) return 1;
+	if (direct) {
+		wzwr(0, reg, nvbuf + reg, 4);
+	}
 	return 0;
 }
 
-static int macadr(p1)
+/* always bsb=0? */
+static int macadr(p1, reg)
 char *p1;
+char reg;
 {
 	/* parse and set MAC addr */
+	int x;
+	char y;
+	char *s, *e;
+
+	s = p1;
+	for (x = 0; x < 6; ++x) {
+		y = hxbyte(s, &e);
+		if (e == 0) return 1;
+		if (x == 5) {
+			if (*e != 0) return 1;
+		} else {
+			if (*e != ':') return 1;
+		}
+		nvbuf[reg + x] = y;
+		s = e + 1;
+	}
+	if (direct) {
+		wzwr(0, reg, nvbuf + reg, 6);
+	}
 	return 0;
 }
 
-static int nid(p1)
+/* always bsb=0? */
+static int nid(p1, reg)
 char *p1;
+char reg;
 {
 	/* parse and set node ID */
+	char nid;
+	char *end;
+
+	nid = hxbyte(p1, &end);
+	if (end == 0 || *end != 0) return 1;
+	if (direct) {
+		wzput1(0, reg, nid);
+	} else {
+		nvbuf[reg] = nid;
+	}
 	return 0;
 }
 
 static int sockx() {
 	/* delete socket config */
+	int ix;
+
+	if (direct) {
+		ix = (cmd - '0') * 4 + 1; /* bsb */
+		wzput1(ix, SN_PRT, 0);
+	} else {
+		ix = (cmd - '0' + 1) * 32;
+		nvbuf[ix + SN_PRT] = 0;
+	}
 	return 0;
 }
 
@@ -89,6 +223,36 @@ char *p3;
 char *p4; /* may be NULL */
 {
 	/* parse and set socket config */
+	int ix;
+	char *s, *e;
+	int n;
+	int w;
+	char bsb;
+
+	/* build in nvbuf[] first */
+	ix = (cmd - '0' + 1) * 32;
+	n = hxbyte(p1, &e) | 0x3100;
+	if (e == 0 || *e != 0) return 1;
+	if (getip(p2, ix + SN_DIPR) != 0) return 1;
+	w = dcword(p3, &e);
+	if (e == 0 || *e != 0) return 1;
+	setword(ix + SN_DPRT, w);
+	if (p4 != 0) {
+		w = dcword(p4, &e);
+		if (e == 0 || *e != 0) return 1;
+		w = w / 5;
+	} else {
+		w = 0;
+	}
+	nvbuf[ix + SN_KANV] = w;
+	setword(ix + SN_PRT, n);
+	if (direct) {
+		bsb = (cmd - '0') * 4 + 1;
+		wzput1(bsb, SN_MR, 1);
+		wzput2(bsb, SN_PRT, n);
+		wzwr(bsb, SN_DIPR, nvbuf + ix + SN_DIPR, 6);
+		wzput1(bsb, SN_KA, w);
+	}
 	return 0;
 }
 
@@ -242,15 +406,19 @@ char **argv;
 		cmd = argv[x][0];
 		switch (cmd) {
 		case 'G':
+			e = ipadr(argv[x + 1], CR_GAR);
+			break;
 		case 'I':
+			e = ipadr(argv[x + 1], CR_SIPR);
+			break;
 		case 'S':
-			e = ipadr(argv[x + 1]);
+			e = ipadr(argv[x + 1], CR_SUBR);
 			break;
 		case 'M':
-			e = macadr(argv[x + 1]);
+			e = macadr(argv[x + 1], CR_SHAR);
 			break;
 		case 'N':
-			e = nid(argv[x + 1]);
+			e = nid(argv[x + 1], CR_PMAG);
 			break;
 		case '0':
 		case '1':
@@ -275,7 +443,7 @@ char **argv;
 	}
 	if (!direct) {
 		if (setnv() != 0) {
-			printf("NVRAM read failure\n");
+			printf("NVRAM write failure\n");
 			exit(1);
 		}
 	}
