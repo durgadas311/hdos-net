@@ -4,6 +4,12 @@
  * Uses CP/M-style FCBs (36-byte).
  */
 
+extern int ninit(); /* (void) */
+extern int ndown(); /* (void) */
+
+extern int nconn(); /* (char sid) */
+extern int ndisc(); /* (void) */
+
 extern int ncreat(); /* (char *fcb) */
 extern int nopen(); /* (char *fcb) */
 extern int nclose(); /* (char *fcb) */

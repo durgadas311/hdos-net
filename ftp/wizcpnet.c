@@ -41,7 +41,7 @@ char sid;
 	char bsb;
 	int port;
 
-	for (bsb = 0; bsb < 0x20; bsb += 0x04) {
+	for (bsb = 1; bsb < 0x20; bsb += 0x04) {
 		port = wzget2(bsb, SN_PRT);
 		if ((port >> 8) == 0x31 && (port & 0xff) == sid) {
 			return wzopen(bsb);
@@ -63,10 +63,18 @@ char bsb;
 	return 0;
 }
 
+int rcvend(bsb)
+char bsb;
+{
+	wzcmd(bsb, SC_RECV);
+	return 0;
+}
+
 /*
  * Take 'len' bytes from recv fifo into 'buf'.
  * Caller must ensure there are bytes available.
  * if 'last' then issue RECV command.
+ * Returns 'len' on success, 0 if not enough data, -1 if error
  */
 int rcvdat(bsb, buf, len, last)
 char bsb;
@@ -81,23 +89,30 @@ char last;
 
 	fif = bsb + 2; /* RX is just +2 from SK */
 	rsr = wzget2(bsb, SN_RXRSR);
-	if (rsr < len) return -1;
+	if (rsr < len) return 0; /* not error, just no data */
 	rxrd = wzget2(bsb, SN_RXRD);
 	wzrd(fif, rxrd, buf, len);
 	rxrd += len;
 	wzput2(bsb, SN_RXRD, rxrd);
 	if (last) {
-		wzcmd(bsb, SC_RECV);
+		rcvend(bsb);
 	}
-	return len; /* or 0? */
+	return len;
 }
 
-int rcvhdr(bsb, buf)
+/* Receives minimal CP/NET message (hdr+1) */
+int rcvhdr(bsb, buf, add)
 char bsb;
 char *buf;
+int add;
 {
+	int ret;
+
 	/* TODO: any init/setup on W5500? */
-	return rcvdat(bsb, buf, CPN_DAT, 0);
+	do {
+		ret = rcvdat(bsb, buf, CPN_DAT + 1 + add, 0);
+	} while (ret == 0);
+	return ret;
 }
 
 /*
@@ -131,11 +146,13 @@ char last;
 
 /*
  * Put CP/NET header from 'buf' into send fifo.
+ * Sends minimal CP/NET message (hdr+1).
  */
-int sndhdr(bsb, buf)
+int sndhdr(bsb, buf, add)
 char bsb;
 char *buf;
+int add;
 {
 	/* TODO: any init/setup on W5500? */
-	return snddat(bsb, buf, CPN_DAT, 0);
+	return snddat(bsb, buf, CPN_DAT + 1 + add, 0);
 }
