@@ -21,6 +21,8 @@ extern int nwclose(); /* (char bsb) - closes socket */
 extern int rcvhdr(); /* (char bsb, char *buf, int add) */
 extern int rcvdat(); /* (char bsb, char *buf, int len, bool last) */
 extern int rcvend(); /* (char bsb) */
+extern int rcvall(); /* (char bsb, char *buf, int len) */
 
 extern int sndhdr(); /* (char bsb, char *buf, int add) */
 extern int snddat(); /* (char bsb, char *buf, int len, bool last) */
+extern int sndend(); /* (char bsb) */

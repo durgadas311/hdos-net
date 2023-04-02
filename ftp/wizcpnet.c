@@ -71,6 +71,32 @@ char bsb;
 }
 
 /*
+ * Take up to 'len' bytes from recv fifo into 'buf'.
+ * issues RECV command.
+ * Returns number of bytes taken.
+ */
+int rcvall(bsb, buf, len)
+char bsb;
+char *buf;
+int len;
+{
+	int rsr;
+	int rxrd;
+	char fif;
+	char ir;
+
+	fif = bsb + 2; /* RX is just +2 from SK */
+	rsr = wzget2(bsb, SN_RXRSR);
+	if (rsr > len) rsr = len;
+	rxrd = wzget2(bsb, SN_RXRD);
+	wzrd(fif, rxrd, buf, rsr);
+	rxrd += rsr;
+	wzput2(bsb, SN_RXRD, rxrd);
+	rcvend(bsb);
+	return rsr;
+}
+
+/*
  * Take 'len' bytes from recv fifo into 'buf'.
  * Caller must ensure there are bytes available.
  * if 'last' then issue RECV command.
@@ -89,7 +115,7 @@ char last;
 
 	fif = bsb + 2; /* RX is just +2 from SK */
 	rsr = wzget2(bsb, SN_RXRSR);
-	if (rsr < len) return 0; /* not error, just no data */
+	if (rsr < len) return 0; /* not enough data, yet */
 	rxrd = wzget2(bsb, SN_RXRD);
 	wzrd(fif, rxrd, buf, len);
 	rxrd += len;
@@ -110,9 +136,23 @@ int add;
 
 	/* TODO: any init/setup on W5500? */
 	do {
+		/* TODO: timeout? */
 		ret = rcvdat(bsb, buf, CPN_DAT + 1 + add, 0);
 	} while (ret == 0);
-	return ret;
+	return ret; /* TODO: what if ret < CPN_DAT + 1 + add */
+}
+
+int sndend(bsb)
+char bsb;
+{
+	char ir;
+
+	wzcmd(bsb, SC_SEND);
+	ir = wzist(bsb, (SI_SEND_OK|SI_TIMEOUT|SI_DISCON));
+	if ((ir & SI_SEND_OK) == 0) {
+		return -1;
+	}
+	return 0;
 }
 
 /*
@@ -127,19 +167,16 @@ char last;
 {
 	int txwr;
 	char fif;
-	char ir;
 
 	fif = bsb + 1; /* TX is just +1 from SK */
 	txwr = wzget2(bsb, SN_TXWR);
+	/* TODO: check for overrun? not possible? */
 	wzwr(fif, txwr, buf, len);
 	txwr += len;
 	wzput2(bsb, SN_TXWR, txwr);
 	if (last) {
-		wzcmd(bsb, SC_SEND);
-		ir = wzist(bsb, (SI_SEND_OK|SI_TIMEOUT|SI_DISCON));
-		if ((ir & SI_SEND_OK) == 0) {
+		if (sndend(bsb) != 0)
 			return -1;
-		}
 	}
 	return len; /* or 0? */
 }
@@ -153,6 +190,6 @@ char bsb;
 char *buf;
 int add;
 {
-	/* TODO: any init/setup on W5500? */
+	/* TODO: any init/setup on W5500? flush recv? */
 	return snddat(bsb, buf, CPN_DAT + 1 + add, 0);
 }

@@ -5,13 +5,14 @@
 
 extern char remdrv; /* 0-15 == A:-P: */
 
-static char cpnhdr[CPN_DAT + 2];
 static char cursid = 255;
 static char curbsb = 0;
 static char cid;
 
+static char cpnhdr[CPN_DAT + 2];
 static char xbuf[256];
 static int ret;
+static int siz;
 
 int nconn(sid)
 char sid;
@@ -53,7 +54,7 @@ static int rcverr(siz)
 int siz;
 {
 	if (siz > 1) {
-		ret = rcvdat(curbsb, xbuf, siz - 1, 1);
+		rcvall(curbsb, xbuf, siz - 1);
 	} else {
 		rcvend(curbsb);
 		xbuf[0] = 0;
@@ -61,8 +62,9 @@ int siz;
 	return cpnhdr[CPN_DAT] | (xbuf[0] << 8);
 }
 
+/* response is minimum message size */
 static int rcvsmp() {
-	ret = rcvhdr(curbsb, cpnhdr, 0);
+	rcvhdr(curbsb, cpnhdr, 0);
 	return rcverr(cpnhdr[CPN_SIZ] + 1); /* should be 1 */
 }
 
@@ -70,13 +72,10 @@ static int rcvsmp() {
 static int rcvfcb(fcb)
 char *fcb;
 {
-	int siz;
-
-	ret = rcvhdr(curbsb, cpnhdr, 0);
+	rcvhdr(curbsb, cpnhdr, 0);
 	siz = cpnhdr[CPN_SIZ] + 1;
 	if (siz == 37) {
-		ret = rcvdat(curbsb, fcb, 36, 1);
-		return ret;
+		return rcvdat(curbsb, fcb, 36, 1);
 	} else { /* error */
 		return rcverr(siz);
 	}
@@ -86,23 +85,24 @@ char *fcb;
 static int rcvdir(buf)
 char *buf;
 {
-	int siz;
 	char dc;
 
-	ret = rcvhdr(curbsb, cpnhdr, 0);
+	rcvhdr(curbsb, cpnhdr, 0);
 	siz = cpnhdr[CPN_SIZ] + 1;
 	if (cpnhdr[CPN_DAT] == 255) {
 		return rcverr(siz);
 	}
 	dc = cpnhdr[CPN_DAT] & 3; /* 0,1,2,3 */
-	if (siz == 1) {
-		rcvend(curbsb);
-	} else if (siz == 33) {
+	if (siz == 33) {
 		ret = rcvdat(curbsb, buf + (dc * 32), 32, 1);
 	} else if (siz == 129) {
 		ret = rcvdat(curbsb, buf, 128, 1);
 	} else { /* assume error */
 		return rcverr(siz);
+	}
+	if (ret == 0) { /* not enough data... ooops... */
+		rcvall(curbsb, xbuf, siz - 1);
+		return 255; /* generic error */
 	}
 	return dc;
 }
@@ -114,53 +114,57 @@ char *fcb;
 	int ret;
 
 	setup(22, 37);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, fcb, 36, 1);
-	ret = rcvfcb(fcb);
-	return ret;
+	sndhdr(curbsb, cpnhdr, 0);
+	if (snddat(curbsb, fcb, 36, 1) == -1)
+		return -1;
+	return rcvfcb(fcb);
 }
 
 int nopen(fcb)
 char *fcb;
 {
 	setup(15, 45);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, fcb, 36, 0);
-	ret = snddat(curbsb, xbuf, 8, 1); /* password (not used) */
-	ret = rcvfcb(fcb);
-	return ret;
+	sndhdr(curbsb, cpnhdr, 0);
+	snddat(curbsb, fcb, 36, 0);
+	if (snddat(curbsb, xbuf, 8, 1) == -1) /* password (not used) */
+		return -1;
+	return rcvfcb(fcb);
 }
 
 int nclose(fcb)
 char *fcb;
 {
 	setup(16, 45);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, fcb, 36, 0);
-	ret = snddat(curbsb, xbuf, 8, 1); /* password (ignored) */
-	ret = rcvfcb(fcb);
-	return ret;
+	sndhdr(curbsb, cpnhdr, 0);
+	snddat(curbsb, fcb, 36, 0);
+	if (snddat(curbsb, xbuf, 8, 1) == -1) /* password (ignored) */
+		return -1;
+	return rcvfcb(fcb);
 }
 
 int nread(fcb, buf, len)
 char *fcb;
 {
-	int siz;
-
 	while (len > 0) {
 		setup(20, 37);
-		ret = sndhdr(curbsb, cpnhdr, 0);
-		ret = snddat(curbsb, fcb, 36, 1);
-		ret = rcvhdr(curbsb, cpnhdr, 0);
+		sndhdr(curbsb, cpnhdr, 0);
+		if (snddat(curbsb, fcb, 36, 1) == -1)
+			return -1;
+		rcvhdr(curbsb, cpnhdr, 0);
 		siz = cpnhdr[CPN_SIZ] + 1;
 		if (siz == 165) {
 			ret = rcvdat(curbsb, fcb, 36, 0);
-			ret = rcvdat(curbsb, buf, 128, 1);
+			if (ret > 0)
+				ret = rcvdat(curbsb, buf, 128, 1);
+			if (ret == 0) {
+				rcvall(curbsb, xbuf, siz);
+				return -1;
+			}
 			if (cpnhdr[CPN_DAT] != 0) { /* EOF? */
 				return cpnhdr[CPN_DAT];
 			}
 		} else { /* error (siz == 2?) */
-			return rcverr();
+			return rcverr(siz);
 		}
 		buf += 128;
 		len -= 128;
@@ -175,18 +179,23 @@ char *fcb;
 
 	while (len > 0) {
 		setup(21, 165);
-		ret = sndhdr(curbsb, cpnhdr, 0);
-		ret = snddat(curbsb, fcb, 36, 0);
-		ret = snddat(curbsb, buf, 128, 1);
-		ret = rcvhdr(curbsb, cpnhdr, 0);
+		sndhdr(curbsb, cpnhdr, 0);
+		snddat(curbsb, fcb, 36, 0);
+		if (snddat(curbsb, buf, 128, 1) == -1)
+			return -1;
+		rcvhdr(curbsb, cpnhdr, 0);
 		siz = cpnhdr[CPN_SIZ] + 1;
 		if (siz == 37) {
 			ret = rcvdat(curbsb, fcb, 36, 1);
+			if (ret == 0) {
+				rcvall(curbsb, xbuf, siz);
+				return -1;
+			}
 			if (cpnhdr[CPN_DAT] != 0) {
 				return cpnhdr[CPN_DAT];
 			}
 		} else { /* error (siz == 2?) */
-			return rcverr();
+			return rcverr(siz);
 		}
 		buf += 128;
 		len -= 128;
@@ -205,8 +214,9 @@ char *fcb;
 	setup(17, 38);
 	cpnhdr[CPN_DAT] = remdrv; /* TODO: check against fcb[0] */
 	cpnhdr[CPN_DAT + 1] = 0; /* no user numbers */
-	ret = snddat(curbsb, cpnhdr, CPN_DAT + 2, 0);
-	ret = snddat(curbsb, fcb, 36, 1);
+	sndhdr(curbsb, cpnhdr, 1);
+	if (snddat(curbsb, fcb, 36, 1) == -1)
+		return -1;
 	return rcvdir(buf);
 }
 
@@ -221,7 +231,9 @@ char *fcb;
 	setup(18, 2);
 	cpnhdr[CPN_DAT] = remdrv; /* TODO: check against fcb[0] */
 	cpnhdr[CPN_DAT + 1] = 0; /* no user numbers */
-	ret = snddat(curbsb, cpnhdr, CPN_DAT + 2, 1);
+	sndhdr(curbsb, cpnhdr, 1);
+	if (sndend(curbsb) == -1)
+		return -1;
 	return rcvdir(buf);
 }
 
@@ -230,8 +242,9 @@ int ndelete(fcb)
 char *fcb;
 {
 	setup(19, 37);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, fcb, 36, 1);
+	sndhdr(curbsb, cpnhdr, 0);
+	if (snddat(curbsb, fcb, 36, 1) == -1)
+		return -1;
 	return rcvsmp();
 }
 
@@ -240,9 +253,10 @@ char *new;
 char *old;
 {
 	setup(23, 37);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, old, 16, 0);
-	ret = snddat(curbsb, new, 20, 1);
+	sndhdr(curbsb, cpnhdr, 0);
+	snddat(curbsb, old, 16, 0);
+	if (snddat(curbsb, new, 20, 1) == -1)
+		return -1;
 	return rcvsmp();
 }
 
@@ -251,8 +265,9 @@ int nsize(fcb)
 char *fcb;
 {
 	setup(35, 37);
-	ret = sndhdr(curbsb, cpnhdr, 0);
-	ret = snddat(curbsb, fcb, 36, 1);
+	sndhdr(curbsb, cpnhdr, 0);
+	if (snddat(curbsb, fcb, 36, 1) == -1)
+		return -1;
 	return rcvfcb(fcb);
 }
 
