@@ -18,6 +18,16 @@ int nwdown()
 	return 0;
 }
 
+int nwcid()
+{
+	return wzget1(0, CR_PMAG);
+}
+
+int nwstat()
+{
+	return 0;
+}
+
 static int wzopen(bsb)
 char bsb;
 {
@@ -29,7 +39,7 @@ char bsb;
 			sr = wzcmd(bsb, SC_OPEN);
 			if (sr != SS_INIT) return -1;
 		}
-		sr = wizcmd(bsb, SC_CONN);
+		sr = wzcmd(bsb, SC_CONN);
 		if (sr != SS_ESTAB) return -1;
 	}
 	return bsb;
