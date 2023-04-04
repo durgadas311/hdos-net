@@ -11,6 +11,7 @@ char sid = 255;
 char dev[4] = { "SY0" };
 
 static char cmdbuf[128];
+static char fcb[36] = {0};
 
 static getline(cc, cv)
 int *cc;
@@ -75,6 +76,46 @@ char **end;
 	}
 	*end = 0;
 	return 0; /* special case - not hex number */
+}
+
+static prfile(de)
+char *de;
+{
+	int x, y;
+	static col = 0;
+
+	if (de == 0) {
+		/* TODO: end of partial line */
+		if (col != 0) putchar('\n');
+		col = 0;
+		return 0;
+	}
+	if (col >= 5) {
+		putchar('\n');
+		col = 0;
+	} else if (col != 0) {
+		putchar(' ');
+		putchar(' ');
+	}
+	y = 0;
+	for (x = 1; x < 9 && de[x] != ' '; ++x) {
+		++y;
+		putchar(de[x]);
+	}
+	x = 9;
+	if (de[x] != ' ') {
+		++y;
+		putchar('.');
+		for (; x < 12 && de[x] != ' '; ++x) {
+			++y;
+			putchar(de[x]);
+		}
+	}
+	while (y < 13) {
+		++y;
+		putchar(' ');
+	}
+	++col;
 }
 
 static cbye() { run = 0; }
@@ -156,6 +197,26 @@ char *drv;
 	printf("Invalid HDOS device name\n");
 }
 
+static cdir(arg)
+char *arg;
+{
+	int e;
+
+	fcb[0] = remdrv + 1;
+	strcpy(fcb + 1, "???????????");
+	e = nfirst(fcb, cmdbuf);
+	if (e == 255) {
+		printf("No file\n");
+		return 0;
+	}
+	while (e != 255) {
+		e = (e & 3) * 32;
+		prfile(cmdbuf + e);
+		e = nnext(fcb, cmdbuf);
+	}
+	prfile(0);
+}
+
 static chelp() {
 	printf("Usage: ftp [<sid>]\n");
 	printf("Commands:\n");
@@ -200,6 +261,8 @@ static docmd() {
 		ccd(cmdv[1]);
 	} else if (strcmp(cmdv[0], "lcd") == 0 && cmdc > 1) {
 		clcd(cmdv[1]);
+	} else if (strcmp(cmdv[0], "dir") == 0) {
+		cdir(0); /* TODO: pass optional arg */
 	} else {
 		printf("Unknown command\n");
 	}
