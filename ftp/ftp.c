@@ -79,6 +79,8 @@ char **end;
 
 static cbye() { run = 0; }
 
+extern int foo1, foo2;
+
 static copen(str)
 char *str;
 {
@@ -90,17 +92,14 @@ char *str;
 		return 0;
 	}
 	nid = hxbyte(str, &end);
-	if (end == 0 || *end != 0) {
-		sid = 255;
+	if (end == 0 || *end != 0 || nid >= 255) {
 		printf("Invalid server node ID \"%s\"\n", str);
 		return 0;
 	}
-#if 0
 	if (nconn(nid) != 0) {
-		printf("Server unknown\n");
+		printf("Server %02x unknown %04x %04x\n", nid, foo1, foo2);
 		return 0;
 	}
-#endif
 	sid = nid;
 	remdrv = 0;
 	strcpy(dev, "SY0");
@@ -112,9 +111,7 @@ static cclose() {
 		printf("Not connected\n");
 		return 0;
 	}
-#if 0
 	ndisc();
-#endif
 	printf("Disconnected from %02x\n", sid);
 	sid = 255;
 }
@@ -126,6 +123,37 @@ static cstatus() {
 	}
 	printf("Server %02x, Remote %c:, Local %s:\n",
 		sid, 'A' + remdrv, dev);
+}
+
+static ccd(drv)
+char *drv;
+{
+	char d;
+
+	if (isalpha(drv[0]) && (drv[1] == ':' || drv[1] == 0)) {
+		d = toupper(drv[0]) - 'A';
+		if (d < 16) {
+			remdrv = d;
+			return 0;
+		}
+	}
+	printf("Invalid CP/NET drive\n");
+}
+
+static clcd(drv)
+char *drv;
+{
+	if (isalpha(drv[0]) && isalpha(drv[1]) &&
+			isdigit(drv[2]) &&
+			(drv[3] == ':' || drv[3] == 0)) {
+		dev[0] = toupper(drv[0]);
+		dev[1] = toupper(drv[1]);
+		dev[2] = drv[2];
+		dev[3] = 0; /* just in case */
+		/* TODO: confirm that it exists... */
+		return 0;
+	}
+	printf("Invalid HDOS device name\n");
 }
 
 static chelp() {
@@ -168,6 +196,10 @@ static docmd() {
 		cclose();
 	} else if (strcmp(cmdv[0], "open") == 0 && cmdc > 1) {
 		copen(cmdv[1]);
+	} else if (strcmp(cmdv[0], "cd") == 0 && cmdc > 1) {
+		ccd(cmdv[1]);
+	} else if (strcmp(cmdv[0], "lcd") == 0 && cmdc > 1) {
+		clcd(cmdv[1]);
 	} else {
 		printf("Unknown command\n");
 	}
@@ -181,9 +213,7 @@ char **argv;
 	int x;
 
 	printf("HDOS FTP-Lite version 1.0\n");
-#if 0
 	ninit();
-#endif
 	if (argc > 1) {
 		copen(argv[1]);
 	}
@@ -191,7 +221,5 @@ char **argv;
 		docmd();
 	}
 	cclose();
-#if 0
 	ndown();
-#endif
 }

@@ -4,7 +4,7 @@ export HDOSDrive_dk0 = $(PWD)
 all: wizio.rel nvram.rel
 
 %.mac: %.c
-	vhdos c -m1 dk0:$<
+	vhdos c -x -m1 dk0:$<
 
 %.rel: %.mac
 	vhdos m80 =dk0:$*

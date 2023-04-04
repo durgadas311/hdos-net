@@ -28,6 +28,9 @@ int nwstat()
 	return 0;
 }
 
+int foo1 = 0;
+int foo2 = 0;
+
 static int wzopen(bsb)
 char bsb;
 {
@@ -39,8 +42,9 @@ char bsb;
 			sr = wzcmd(bsb, SC_OPEN);
 			if (sr != SS_INIT) return -1;
 		}
-		sr = wzcmd(bsb, SC_CONN);
-		if (sr != SS_ESTAB) return -1;
+		wzcmd(bsb, SC_CONN);
+		sr = wzist(bsb, (SI_CON|SI_TIMEOUT|SI_DISCON));
+		if ((sr & SI_CON) == 0) return -1;
 	}
 	return bsb;
 }
