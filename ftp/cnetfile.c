@@ -75,7 +75,9 @@ char *fcb;
 	rcvhdr(curbsb, cpnhdr, 0);
 	siz = cpnhdr[CPN_SIZ] + 1;
 	if (siz == 37) {
-		return rcvdat(curbsb, fcb, 36, 1);
+		ret = rcvdat(curbsb, fcb, 36, 1);
+		if (ret <= 0) return -1;
+		return 0;
 	} else { /* error */
 		return rcverr(siz);
 	}

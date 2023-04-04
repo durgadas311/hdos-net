@@ -78,6 +78,55 @@ char **end;
 	return 0; /* special case - not hex number */
 }
 
+/*
+ * Builds an FCB from a filename string.
+ * handles wildcards, in which case returns 1.
+ * otherwise (simple filename) returns 0.
+ */
+static int getfcb(fn, fcb)
+char *fn;
+char *fcb;
+{
+	char afn, b, c;
+	int x, y;
+
+	afn = 0;
+	x = 0;
+	y = 1;
+	b = ' ';
+	/* TODO: check for errors like ':' */
+	while ((c = fn[x]) != 0 && c != '.' && y < 9) {
+		++x;
+		if (c == '*') {
+			afn = 1;
+			b = '?';
+			break;
+		}
+		if (c == '?') afn = 1;
+		fcb[y++] = toupper(c);
+	}
+	while (y < 9) fcb[y++] = b;
+	while ((c = fn[x]) != 0 && c != '.') ++x;
+	if (c == '.') ++x;
+	b = ' ';
+	while ((c = fn[x]) != 0 && y < 12) {
+		++x;
+		if (c == '*') {
+			afn = 1;
+			b = '?';
+			break;
+		}
+		if (c == '?') afn = 1;
+		fcb[y++] = toupper(c);
+	}
+	while (y < 12) fcb[y++] = b;
+	return afn;
+}
+
+/*
+ * Print a file name from a CP/M FCB.
+ * prints in a 13-char field, 5 files per line.
+ */
 static prfile(de)
 char *de;
 {
@@ -202,8 +251,13 @@ char *arg;
 {
 	int e;
 
+	if (arg == 0) {
+		strcpy(fcb + 1, "???????????");
+	} else {
+		getfcb(arg, fcb);
+	}
 	fcb[0] = remdrv + 1;
-	strcpy(fcb + 1, "???????????");
+	fcb[12] = 0;
 	e = nfirst(fcb, cmdbuf);
 	if (e == 255) {
 		printf("No file\n");
@@ -215,6 +269,26 @@ char *arg;
 		e = nnext(fcb, cmdbuf);
 	}
 	prfile(0);
+}
+
+static csize(arg)
+char *arg;
+{
+	int sz;
+
+	if (getfcb(arg, fcb) != 0) {
+		printf("Wildcards not allowed\n");
+		return 0;
+	}
+	fcb[0] = remdrv + 1;
+	fcb[12] = 0;
+	if (nsize(fcb) != 0) {
+		printf("Failled to get remote file size\n");
+		return 0;
+	}
+	sz = (fcb[33] >> 3) | (fcb[34] << 5) | (fcb[35] << 13);
+	if ((fcb[33] & 7) != 0) ++sz;
+	printf("%s: %uK\n", arg, sz);
 }
 
 static chelp() {
@@ -262,7 +336,9 @@ static docmd() {
 	} else if (strcmp(cmdv[0], "lcd") == 0 && cmdc > 1) {
 		clcd(cmdv[1]);
 	} else if (strcmp(cmdv[0], "dir") == 0) {
-		cdir(0); /* TODO: pass optional arg */
+		cdir(cmdv[1]); /* might be NULL */
+	} else if (strcmp(cmdv[0], "size") == 0 && cmdc > 1) {
+		csize(cmdv[1]);
 	} else {
 		printf("Unknown command\n");
 	}
