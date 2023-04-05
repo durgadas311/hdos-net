@@ -181,20 +181,21 @@ static ffree() {
 	}
 }
 
-static stfile(str, de)
+static stfile(str, ff, pad)
 char *str;
-char *de;
+char *ff; /* 11 byte (8+3) filename field */
+char pad;
 {
 	int x;
 
-	for (x = 1; x < 9 && de[x] != ' '; ++x) {
-		*str++ = de[x];
+	for (x = 0; x < 8 && ff[x] != pad; ++x) {
+		*str++ = ff[x];
 	}
-	x = 9;
-	if (de[x] != ' ') {
+	x = 8;
+	if (ff[x] != pad) {
 		*str++ = '.';
-		for (; x < 12 && de[x] != ' '; ++x) {
-			*str++ = de[x];
+		for (; x < 11 && ff[x] != pad; ++x) {
+			*str++ = ff[x];
 		}
 	}
 	*str++ = 0;
@@ -204,8 +205,9 @@ char *de;
  * Print a file name from a CP/M FCB.
  * prints in a 13-char field, 5 files per line.
  */
-static prfile(de)
+static prfile(de, pad)
 char *de;
+char pad;
 {
 	int x, y;
 	static col = 0;
@@ -223,24 +225,8 @@ char *de;
 		putchar(' ');
 		putchar(' ');
 	}
-	y = 0;
-	for (x = 1; x < 9 && de[x] != ' '; ++x) {
-		++y;
-		putchar(de[x]);
-	}
-	x = 9;
-	if (de[x] != ' ') {
-		++y;
-		putchar('.');
-		for (; x < 12 && de[x] != ' '; ++x) {
-			++y;
-			putchar(de[x]);
-		}
-	}
-	while (y < 13) {
-		++y;
-		putchar(' ');
-	}
+	stfile(gfn, de + 1, pad);
+	printf("%-13s", gfn);
 	++col;
 }
 
@@ -344,10 +330,10 @@ char **argv;
 	}
 	while (e != 255) {
 		e = (e & 3) * 32;
-		prfile(dskbuf + e);
+		prfile(dskbuf + e, ' ');
 		e = nnext(fcb, dskbuf);
 	}
-	prfile(0);
+	prfile(0, 0);
 }
 
 static csize(argc, argv)
@@ -387,7 +373,7 @@ char *fcb;
 		nclose(fcb);
 		return -1;
 	}
-	prfile(fcb);
+	prfile(fcb, ' ');
 	printf("-> %s...", dskbuf);
 	while ((n = nread(fcb, dskbuf, 256)) > 0) {
 		if (write(fd, dskbuf, 256) == -1) {
@@ -401,7 +387,7 @@ char *fcb;
 	if (n == 0) {
 		printf("Done");
 	}
-	prfile(0);
+	prfile(0, 0);
 	return n;
 }
 
@@ -421,7 +407,7 @@ char *pat;
 		memcpy(fcb + 1, f->fn, sizeof(f->fn));
 		fcb[0] = remdrv + 1;
 		fcb[12] = 0;
-		stfile(gfn, fcb);
+		stfile(gfn, fcb + 1, ' ');
 		if (fget(gfn, fcb) == -1) {
 			break;
 		}
@@ -522,7 +508,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.1\n");
+	printf("HDOS FTP-Lite version 0.2\n");
 	ninit();
 	if (argc > 1) {
 		copen(argc, argv);
