@@ -306,9 +306,7 @@ static chelp() {
 	printf("close		close current connection\n");
 	printf("cd <drive>	change remote drive A:-P:\n");
 	printf("dir [<afn>]	list remote files\n");
-	printf("pwd		show remote drive name\n");
 	printf("lcd <device>	change local drive SY0:,...\n");
-	printf("lpwd		show local drive name\n");
 	printf("ldir [<afn>]	list local files\n");
 	printf("get <rf> [<lf>]	get remote file(s) [to local file]\n");
 	printf("put <lf> [<rf>]	put local file(s) [to remote file]\n");
