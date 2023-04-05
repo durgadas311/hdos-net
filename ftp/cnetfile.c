@@ -146,7 +146,12 @@ char *fcb;
 
 int nread(fcb, buf, len)
 char *fcb;
+char *buf;
+int len;
 {
+	int n;
+
+	n = 0;
 	while (len > 0) {
 		setup(20, 37);
 		sndhdr(curbsb, cpnhdr, 0);
@@ -162,20 +167,28 @@ char *fcb;
 				rcvall(curbsb, xbuf, siz);
 				return -1;
 			}
-			if (cpnhdr[CPN_DAT] != 0) { /* EOF? */
-				return cpnhdr[CPN_DAT];
-			}
 		} else { /* error (siz == 2?) */
-			return rcverr(siz);
+			rcverr(siz);
+			if (cpnhdr[CPN_DAT] == 1) { /* EOF */
+				if (n > 0) {
+					for (; len > 0; --len) *buf++ = 0;
+				}
+				break;
+			}
+			/* TODO: save full error? */
+			return -1;
 		}
 		buf += 128;
 		len -= 128;
+		n += 128;
 	}
-	return 0;
+	return n;
 }
 
 int nwrite(fcb, buf, len)
 char *fcb;
+char *buf;
+int len;
 {
 	int siz;
 

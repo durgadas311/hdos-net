@@ -32,6 +32,7 @@ static int wzopen(bsb)
 char bsb;
 {
 	char sr;
+	int x;
 
 	sr = wzget1(bsb, SN_SR);
 	if (sr != SS_ESTAB) {
@@ -40,8 +41,8 @@ char bsb;
 			if (sr != SS_INIT) return -1;
 		}
 		wzcmd(bsb, SC_CONN);
-		sr = wzist(bsb, (SI_CON|SI_TIMEOUT|SI_DISCON));
-		if ((sr & SI_CON) == 0) return -1;
+		sr = x = wzist(bsb, (SI_CON|SI_TIMEOUT|SI_DISCON));
+		if (x == -1 || (sr & SI_CON) == 0) return -1;
 	}
 	return bsb;
 }
@@ -157,12 +158,11 @@ int sndend(bsb)
 char bsb;
 {
 	char ir;
+	int x;
 
 	wzcmd(bsb, SC_SEND);
-	ir = wzist(bsb, (SI_SEND_OK|SI_TIMEOUT|SI_DISCON));
-	if ((ir & SI_SEND_OK) == 0) {
-		return -1;
-	}
+	ir = x = wzist(bsb, (SI_SEND_OK|SI_TIMEOUT|SI_DISCON));
+	if (x == -1 || (ir & SI_SEND_OK) == 0) return -1;
 	return 0;
 }
 
