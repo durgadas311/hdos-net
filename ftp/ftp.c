@@ -53,6 +53,8 @@ char chr;
 		return chr - '0';
 	} else if (chr >= 'A' && chr <= 'F') {
 		return (chr - 'A') + 10;
+	} else if (chr >= 'a' && chr <= 'f') {
+		return (chr - 'a') + 10;
 	} else {
 		return 255;
 	}
@@ -169,10 +171,9 @@ char *de;
 
 static cbye() { run = 0; }
 
-extern int foo1, foo2;
-
-static copen(str)
-char *str;
+static copen(argc, argv)
+int argc;
+char **argv;
 {
 	char *end;
 	char nid;
@@ -181,13 +182,13 @@ char *str;
 		printf("Already connected\n");
 		return 0;
 	}
-	nid = hxbyte(str, &end);
+	nid = hxbyte(argv[1], &end);
 	if (end == 0 || *end != 0 || nid >= 255) {
-		printf("Invalid server node ID \"%s\"\n", str);
+		printf("Invalid server node ID \"%s\"\n", argv[1]);
 		return 0;
 	}
 	if (nconn(nid) != 0) {
-		printf("Server %02x unknown %04x %04x\n", nid, foo1, foo2);
+		printf("Server %02x unknown\n", nid);
 		return 0;
 	}
 	sid = nid;
@@ -197,10 +198,7 @@ char *str;
 }
 
 static cclose() {
-	if (sid == 255) {
-		printf("Not connected\n");
-		return 0;
-	}
+	if (sid == 255) return;
 	ndisc();
 	printf("Disconnected from %02x\n", sid);
 	sid = 255;
@@ -215,11 +213,14 @@ static cstatus() {
 		sid, 'A' + remdrv, dev);
 }
 
-static ccd(drv)
-char *drv;
+static ccd(argc, argv)
+int argc;
+char **argv;
 {
 	char d;
+	char *drv;
 
+	drv = argv[1];
 	if (isalpha(drv[0]) && (drv[1] == ':' || drv[1] == 0)) {
 		d = toupper(drv[0]) - 'A';
 		if (d < 16) {
@@ -230,9 +231,13 @@ char *drv;
 	printf("Invalid CP/NET drive\n");
 }
 
-static clcd(drv)
-char *drv;
+static clcd(argc, argv)
+int argc;
+char **argv;
 {
+	char *drv;
+
+	drv = argv[1];
 	if (isalpha(drv[0]) && isalpha(drv[1]) &&
 			isdigit(drv[2]) &&
 			(drv[3] == ':' || drv[3] == 0)) {
@@ -246,15 +251,16 @@ char *drv;
 	printf("Invalid HDOS device name\n");
 }
 
-static cdir(arg)
-char *arg;
+static cdir(argc, argv)
+int argc;
+char **argv;
 {
 	int e;
 
-	if (arg == 0) {
+	if (argc < 2) {
 		strcpy(fcb + 1, "???????????");
 	} else {
-		getfcb(arg, fcb);
+		getfcb(argv[1], fcb);
 	}
 	fcb[0] = remdrv + 1;
 	fcb[12] = 0;
@@ -271,12 +277,13 @@ char *arg;
 	prfile(0);
 }
 
-static csize(arg)
-char *arg;
+static csize(argc, argv)
+int argc;
+char **argv;
 {
 	int sz;
 
-	if (getfcb(arg, fcb) != 0) {
+	if (getfcb(argv[1], fcb) != 0) {
 		printf("Wildcards not allowed\n");
 		return 0;
 	}
@@ -288,7 +295,7 @@ char *arg;
 	}
 	sz = (fcb[33] >> 3) | (fcb[34] << 5) | (fcb[35] << 13);
 	if ((fcb[33] & 7) != 0) ++sz;
-	printf("%s: %uK\n", arg, sz);
+	printf("%s: %uK\n", argv[1], sz);
 }
 
 static chelp() {
@@ -314,34 +321,51 @@ static chelp() {
 	printf("get, put, and delete also allow wildcards\n");
 }
 
+#define F_CON	1
+#define F_ARG	2
+
+static struct cmds {
+	char cmd[8];
+	char flg;
+	int (*fnc)();
+} cmdtbl[20] = {
+	{"quit", 0, cbye},
+	{"help", 0, chelp},
+	{"status", 0, cstatus},
+	{"open", F_ARG, copen},
+	{"close", F_CON, cclose},
+	{"cd", F_CON|F_ARG, ccd},
+	{"lcd", F_CON|F_ARG, clcd},
+	{"dir", F_CON, cdir},
+	{"size", F_CON|F_ARG, csize},
+	{0,0, 0}
+};
+
 static int cmdc;
 static char *cmdv[8];
 
 static docmd() {
+	struct cmds *cmd;
+
 	printf("ftp> ");
 	getline(&cmdc, cmdv);
 	if (cmdc < 1) return 0;
-	if (strcmp(cmdv[0], "quit") == 0) {
-		cbye();
-	} else if (strcmp(cmdv[0], "help") == 0) {
-		chelp();
-	} else if (strcmp(cmdv[0], "status") == 0) {
-		cstatus();
-	} else if (strcmp(cmdv[0], "close") == 0) {
-		cclose();
-	} else if (strcmp(cmdv[0], "open") == 0 && cmdc > 1) {
-		copen(cmdv[1]);
-	} else if (strcmp(cmdv[0], "cd") == 0 && cmdc > 1) {
-		ccd(cmdv[1]);
-	} else if (strcmp(cmdv[0], "lcd") == 0 && cmdc > 1) {
-		clcd(cmdv[1]);
-	} else if (strcmp(cmdv[0], "dir") == 0) {
-		cdir(cmdv[1]); /* might be NULL */
-	} else if (strcmp(cmdv[0], "size") == 0 && cmdc > 1) {
-		csize(cmdv[1]);
-	} else {
-		printf("Unknown command\n");
+	for (cmd = cmdtbl; cmd->cmd[0] != 0; ++cmd) {
+		if (strcmp(cmd->cmd, cmdv[0]) == 0) break;
 	}
+	if (cmd->cmd[0] == 0) {
+		printf("Unknown command\n");
+		return;
+	}
+	if ((cmd->flg & F_CON) && sid == 255) {
+		printf("Not connected\n");
+		return;
+	}
+	if ((cmd->flg & F_ARG) && cmdc < 2) {
+		printf("Missing argument(s)\n");
+		return;
+	}
+	(*cmd->fnc)(cmdc, cmdv);
 }
 
 
@@ -351,10 +375,10 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 1.0\n");
+	printf("HDOS FTP-Lite version 0.1\n");
 	ninit();
 	if (argc > 1) {
-		copen(argv[1]);
+		copen(argc, argv);
 	}
 	while (run) {
 		docmd();

@@ -28,9 +28,6 @@ int nwstat()
 	return 0;
 }
 
-int foo1 = 0;
-int foo2 = 0;
-
 static int wzopen(bsb)
 char bsb;
 {

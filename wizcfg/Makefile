@@ -25,3 +25,8 @@ $(DK1)/%.rel: $(DK1)/%.c
 
 wizcfg.abs: wizcfg.rel $(DK1)/wizio.rel $(DK1)/nvram.rel $(SY0)/printf.rel
 	vhdos l80 dk0:wizcfg,dk1:wizio,dk1:nvram,sy0:printf,sy0:clibrary,dk0:wizcfg/n/e
+
+ship: ../bin/wizcfg.abs
+
+../bin/%: %
+	cp $< $@
