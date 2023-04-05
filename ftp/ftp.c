@@ -355,6 +355,7 @@ char **argv;
 	printf("%s: %uK\n", argv[1], sz);
 }
 
+/* Copy (download) 'fcb' to 'lf' */
 static fget(lf, fcb)
 char *lf;
 char *fcb;
@@ -373,8 +374,8 @@ char *fcb;
 		nclose(fcb);
 		return -1;
 	}
-	prfile(fcb, ' ');
-	printf("-> %s...", dskbuf);
+	stfile(gfn, fcb + 1, ' ');
+	printf("%-12s -> %s...", gfn, dskbuf);
 	while ((n = nread(fcb, dskbuf, 256)) > 0) {
 		if (write(fd, dskbuf, 256) == -1) {
 			printf("local write error\n");
@@ -385,9 +386,45 @@ char *fcb;
 	fclose(fd);
 	nclose(fcb);
 	if (n == 0) {
-		printf("Done");
+		printf("Done\n");
 	}
-	prfile(0, 0);
+	return n;
+}
+
+/* Copy (upload) 'lf' to 'fcb' */
+static fput(lf, fcb)
+char *lf;
+char *fcb;
+{
+	int fd;
+	int n;
+
+	sprintf(dskbuf, "%s:%s", dev, lf);
+	fd = fopen(dskbuf, "rb");
+	if (fd == 0) {
+		printf("No local file\n");
+		return -1;
+	}
+	/* TODO: protect against existing file? */
+	if (nopen(fcb) != 0 && ncreat(fcb) != 0) {
+		printf("Cannot create remote file\n");
+		fclose(fd);
+		return -1;
+	}
+	stfile(gfn, fcb + 1, ' ');
+	printf("%-16s -> %s...", dskbuf, gfn);
+	while ((n = read(fd, dskbuf, 256)) > 0) {
+		if (nwrite(fcb, dskbuf, 256) != 0) {
+			printf("remote write error\n");
+			n = -1;
+			break;
+		}
+	}
+	fclose(fd);
+	nclose(fcb);
+	if (n == 0) {
+		printf("Done\n");
+	}
 	return n;
 }
 
@@ -416,6 +453,12 @@ getout:
 	ffree();
 }
 
+static mput(pat)
+char *pat;
+{
+	printf("mput not supported\n");
+}
+
 static cget(argc, argv)
 int argc;
 char **argv;
@@ -430,6 +473,22 @@ char **argv;
 	if (argc > 2) f = argv[2];
 	else f = argv[1];
 	fget(f, fcb);
+}
+
+static cput(argc, argv)
+int argc;
+char **argv;
+{
+	char *f;
+
+	if (getfcb(argv[1], fcb) != 0) {
+		/* TODO: error if argc > 2? */
+		mput(fcb);
+		return;
+	}
+	if (argc > 2) f = argv[2];
+	else f = argv[1];
+	fput(f, fcb);
 }
 
 static chelp() {
@@ -471,6 +530,7 @@ static struct cmds {
 	{"dir", F_CON, cdir},
 	{"size", F_CON|F_ARG, csize},
 	{"get", F_CON|F_ARG, cget},
+	{"put", F_CON|F_ARG, cput},
 	{0,0, 0}
 };
 
