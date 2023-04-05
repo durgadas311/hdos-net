@@ -10,9 +10,23 @@ int run = 1;
 char sid = 255;
 char dev[4] = { "SY0" };
 
+static struct fname {
+	struct fname *next;
+	char fn[11];
+} *list = 0, *tail = 0;
+
 static char cmdbuf[128];
 static char dskbuf[256];
 static char fcb[36] = {0};
+static char gfn[16];
+
+static memcpy(dst, src, len)
+char *dst;
+char *src;
+int len;
+{
+	while (len-- > 0) *dst++ = *src++;
+}
 
 static getline(cc, cv)
 int *cc;
@@ -126,6 +140,64 @@ char *fcb;
 	fcb[0] = remdrv + 1;
 	fcb[12] = 0;
 	return afn;
+}
+
+static int flist(pat)
+char *pat;
+{
+	int e, c;
+	struct fname *f;
+
+	c = 0;
+	e = nfirst(pat, dskbuf);
+	while (e != 255) {
+		e = (e & 3) * 32;
+		f = alloc(sizeof(struct fname));
+		if (f == 0) {
+			printf("Out of memory\n");
+			return -1;
+		}
+		++c;
+		memcpy(f->fn, dskbuf + e + 1, sizeof(f->fn));
+		f->next = 0;
+		if (tail == 0) {
+			list = tail = f;
+		} else {
+			tail->next = f;
+			tail = f;
+		}
+		e = nnext(pat, dskbuf);
+	}
+	return c;
+}
+
+static ffree() {
+	struct fname *f;
+
+	tail = 0;
+	while ((f = list) != 0) {
+		list = list->next;
+		free(f);
+	}
+}
+
+static stfile(str, de)
+char *str;
+char *de;
+{
+	int x;
+
+	for (x = 1; x < 9 && de[x] != ' '; ++x) {
+		*str++ = de[x];
+	}
+	x = 9;
+	if (de[x] != ' ') {
+		*str++ = '.';
+		for (; x < 12 && de[x] != ' '; ++x) {
+			*str++ = de[x];
+		}
+	}
+	*str++ = 0;
 }
 
 /*
@@ -333,10 +405,29 @@ char *fcb;
 	return n;
 }
 
-static mget(fcb)
-char *fcb;
+static mget(pat)
+char *pat;
 {
-	printf("mget not supported\n");
+	int c;
+	struct fname *f;
+
+	c = flist(pat);
+	if (c == -1) goto getout;
+	if (c == 0) {
+		printf("No files\n");
+		return;
+	}
+	for (f = list; f != 0; f = f->next) {
+		memcpy(fcb + 1, f->fn, sizeof(f->fn));
+		fcb[0] = remdrv + 1;
+		fcb[12] = 0;
+		stfile(gfn, fcb);
+		if (fget(gfn, fcb) == -1) {
+			break;
+		}
+	}
+getout:
+	ffree();
 }
 
 static cget(argc, argv)
