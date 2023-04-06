@@ -143,6 +143,7 @@ char *fcb;
 	while (y < 12) fcb[y++] = b;
 	fcb[0] = remdrv + 1;
 	fcb[12] = 0;
+	fcb[32] = 0;
 	return afn;
 }
 
@@ -535,6 +536,7 @@ char *pat;
 		memcpy(fcb + 1, f->fn, sizeof(f->fn));
 		fcb[0] = remdrv + 1;
 		fcb[12] = 0;
+		fcb[32] = 0;
 		stfile(gfn, fcb + 1, ' ');
 		if (fget(gfn, fcb) == -1) {
 			break;
@@ -560,6 +562,7 @@ char *pat;
 		memcpy(fcb + 1, f->fn, sizeof(f->fn));
 		fcb[0] = remdrv + 1;
 		fcb[12] = 0;
+		fcb[32] = 0;
 		stfile(gfn, fcb + 1, ' ');
 		if (fput(gfn, fcb) == -1) {
 			break;
@@ -696,7 +699,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.4\n");
+	printf("HDOS FTP-Lite version 0.5\n");
 	setctlc();
 	ninit();
 	if (argc > 1) {

@@ -34,6 +34,7 @@ char bsb;
 	char sr;
 	int x;
 
+	wzput1(bsb, SN_IR, (SI_CON|SI_TIMEOUT|SI_DISCON)); /* clear left-overs */
 	sr = wzget1(bsb, SN_SR);
 	if (sr != SS_ESTAB) {
 		if (sr != SS_INIT) {
