@@ -16,7 +16,7 @@ static struct fname {
 } *list = 0, *tail = 0;
 
 static char cmdbuf[128];
-static char dskbuf[256];
+static char dskbuf[512];
 static char fcb[36] = {0};
 static char gfn[16];
 
@@ -25,7 +25,11 @@ char *dst;
 char *src;
 int len;
 {
-	while (len-- > 0) *dst++ = *src++;
+	/* also convert NUL to SP */
+	while (len-- > 0) {
+		if (*src) *dst++ = *src++;
+		else { *dst++ = ' '; ++src; }
+	}
 }
 
 static getline(cc, cv)
@@ -142,6 +146,24 @@ char *fcb;
 	return afn;
 }
 
+static struct fname *fnew(ff)
+char *ff;
+{
+	struct fname *f;
+
+	f = alloc(sizeof(struct fname));
+	if (f == 0) return 0;
+	memcpy(f->fn, ff, sizeof(f->fn));
+	f->next = 0;
+	if (tail == 0) {
+		list = tail = f;
+	} else {
+		tail->next = f;
+		tail = f;
+	}
+	return f;
+}
+
 static int flist(pat)
 char *pat;
 {
@@ -152,20 +174,12 @@ char *pat;
 	e = nfirst(pat, dskbuf);
 	while (e != 255) {
 		e = (e & 3) * 32;
-		f = alloc(sizeof(struct fname));
+		f = fnew(dskbuf + e + 1);
 		if (f == 0) {
 			printf("Out of memory\n");
 			return -1;
 		}
 		++c;
-		memcpy(f->fn, dskbuf + e + 1, sizeof(f->fn));
-		f->next = 0;
-		if (tail == 0) {
-			list = tail = f;
-		} else {
-			tail->next = f;
-			tail = f;
-		}
 		e = nnext(pat, dskbuf);
 	}
 	return c;
@@ -179,6 +193,57 @@ static ffree() {
 		list = list->next;
 		free(f);
 	}
+}
+
+static int match(de, pat)
+char *de;
+char *pat;
+{
+	int x;
+	char c;
+
+	for (x = 0; x < 11; ++x) {
+		if (pat[x] == '?') continue;
+		c = de[x];
+		if (c == 0) c = ' ';
+		if (c != pat[x]) return 0;
+	}
+	return 1;
+}
+
+static int llist(pat)
+char *pat;
+{
+	int c, i;
+	struct fname *f;
+	int fd;
+
+	sprintf(dskbuf, "%s:direct.sys", dev);
+	fd = fopen(dskbuf, "rb");
+	if (fd == 0) {
+		printf("Directory error\n");
+		return -1;
+	}
+	c = 0;
+	while (read(fd, dskbuf, 512) == 512) {
+		/* TODO: allow SYS files? */
+		for (i = 0; i < 0x1fa; i += 23) {
+			if (dskbuf[i] == 0xfe) goto done;
+			if (dskbuf[i] == 0xff) continue;
+			if (dskbuf[i + 14] & 0x80) continue; /* SYS */
+			if (!match(dskbuf + i, pat + 1)) continue;
+			f = fnew(dskbuf + i);
+			if (f == 0) {
+				printf("Out of memory\n");
+				c = -1;
+				goto done;
+			}
+			++c;
+		}
+	}
+done:
+	fclose(fd);
+	return c;
 }
 
 static stfile(str, ff, pad)
@@ -336,6 +401,32 @@ char **argv;
 	prfile(0, 0);
 }
 
+static cldir(argc, argv)
+int argc;
+char **argv;
+{
+	int e;
+	struct fname *f;
+
+	if (argc < 2) {
+		getfcb("*.*", fcb);
+	} else {
+		getfcb(argv[1], fcb);
+	}
+	e = llist(fcb);
+	if (e == -1) goto getout;
+	if (e == 0) {
+		printf("No file\n");
+		return;
+	}
+	for (f = list; f != 0; f = f->next) {
+		prfile(f->fn - 1, ' ');
+	}
+	prfile(0, 0);
+getout:
+	ffree();
+}
+
 static csize(argc, argv)
 int argc;
 char **argv;
@@ -456,7 +547,26 @@ getout:
 static mput(pat)
 char *pat;
 {
-	printf("mput not supported\n");
+	int c;
+	struct fname *f;
+
+	c = llist(pat);
+	if (c == -1) goto getout;
+	if (c == 0) {
+		printf("No files\n");
+		return;
+	}
+	for (f = list; f != 0; f = f->next) {
+		memcpy(fcb + 1, f->fn, sizeof(f->fn));
+		fcb[0] = remdrv + 1;
+		fcb[12] = 0;
+		stfile(gfn, fcb + 1, ' ');
+		if (fput(gfn, fcb) == -1) {
+			break;
+		}
+	}
+getout:
+	ffree();
 }
 
 static cget(argc, argv)
@@ -526,9 +636,10 @@ static struct cmds {
 	{"open", F_ARG, copen},
 	{"close", F_CON, cclose},
 	{"cd", F_CON|F_ARG, ccd},
-	{"lcd", F_CON|F_ARG, clcd},
 	{"dir", F_CON, cdir},
 	{"size", F_CON|F_ARG, csize},
+	{"lcd", F_CON|F_ARG, clcd},
+	{"ldir", F_CON, cldir},
 	{"get", F_CON|F_ARG, cget},
 	{"put", F_CON|F_ARG, cput},
 	{0,0, 0}
@@ -568,7 +679,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.2\n");
+	printf("HDOS FTP-Lite version 0.3\n");
 	ninit();
 	if (argc > 1) {
 		copen(argc, argv);
