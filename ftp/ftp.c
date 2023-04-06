@@ -672,6 +672,23 @@ static docmd() {
 	(*cmd->fnc)(cmdc, cmdv);
 }
 
+static abort() {
+	printf("Ctl-C\n");
+	cclose();
+	ndown();
+#asm
+	db	255,7	; SCALL CLRCO
+#endasm
+	exit(1);
+}
+
+static setctlc() {
+	abort;
+#asm
+	mvi	a,3
+	db	255,33	; SCALL CTLC
+#endasm
+}
 
 main(argc, argv)
 int argc;
@@ -679,7 +696,8 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.3\n");
+	printf("HDOS FTP-Lite version 0.4\n");
+	setctlc();
 	ninit();
 	if (argc > 1) {
 		copen(argc, argv);
