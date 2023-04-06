@@ -20,6 +20,19 @@ static char dskbuf[512];
 static char fcb[36] = {0};
 static char gfn[16];
 
+/* assumes s1 is already lower-case */
+static int stricmp(s1, s2)
+char *s1;
+char *s2;
+{
+	while (*s1 && *s2) {
+		if (*s1 != tolower(*s2)) break;
+		++s1;
+		++s2;
+	}
+	return *s2 - *s1;
+}
+
 static memcpy(dst, src, len)
 char *dst;
 char *src;
@@ -655,7 +668,7 @@ static docmd() {
 	getline(&cmdc, cmdv);
 	if (cmdc < 1) return 0;
 	for (cmd = cmdtbl; cmd->cmd[0] != 0; ++cmd) {
-		if (strcmp(cmd->cmd, cmdv[0]) == 0) break;
+		if (stricmp(cmd->cmd, cmdv[0]) == 0) break;
 	}
 	if (cmd->cmd[0] == 0) {
 		printf("Unknown command\n");
