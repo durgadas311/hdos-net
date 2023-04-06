@@ -320,7 +320,6 @@ char **argv;
 	}
 	sid = nid;
 	remdrv = 0;
-	strcpy(dev, "SY0");
 	printf("Connected to %02x\n", sid);
 }
 
@@ -333,7 +332,7 @@ static cclose() {
 
 static cstatus() {
 	if (sid == 255) {
-		printf("Not connected\n");
+		printf("Not connected, Local %s:\n", dev);
 		return 0;
 	}
 	printf("Server %02x, Remote %c:, Local %s:\n",
@@ -616,13 +615,11 @@ static chelp() {
 	printf("ldir [<afn>]	list local files\n");
 	printf("get <rf> [<lf>]	get remote file(s) [to local file]\n");
 	printf("put <lf> [<rf>]	put local file(s) [to remote file]\n");
-	printf("delete <rf>	delete remote file(s)\n");
-	printf("rename <old> <new>\n		rename remote file\n");
 	printf("size <rf>	show remote file size\n");
 	printf("status		show ftp status\n");
 	printf("quit		disconnect and exit ftp\n");
 	printf("Where: <afn> = Ambiguous File Name (wildcards)\n");
-	printf("get, put, and delete also allow wildcards\n");
+	printf("get and put also allow wildcards\n");
 }
 
 #define F_CON	1
@@ -641,8 +638,8 @@ static struct cmds {
 	{"cd", F_CON|F_ARG, ccd},
 	{"dir", F_CON, cdir},
 	{"size", F_CON|F_ARG, csize},
-	{"lcd", F_CON|F_ARG, clcd},
-	{"ldir", F_CON, cldir},
+	{"lcd", F_ARG, clcd},
+	{"ldir", 0, cldir},
 	{"get", F_CON|F_ARG, cget},
 	{"put", F_CON|F_ARG, cput},
 	{0,0, 0}
