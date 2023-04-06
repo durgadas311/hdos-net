@@ -440,6 +440,49 @@ getout:
 	ffree();
 }
 
+/* return file size in KB, or -1 on error */
+static int fsize(fcb)
+char *fcb;
+{
+	int sz;
+
+	if (nsize(fcb) != 0) {
+		printf("Failed to get remote file size\n");
+		return -1;
+	}
+	sz = (fcb[33] >> 3) | (fcb[34] << 5) | (fcb[35] << 13);
+	if ((fcb[33] & 7) != 0) ++sz;
+	return sz;
+}
+
+static int msize(pat)
+char *pat;
+{
+	int sz, z;
+	int c;
+	struct fname *f;
+
+	c = flist(pat);
+	if (c == -1) goto getout;
+	if (c == 0) {
+		printf("No files\n");
+		return 0;
+	}
+	sz = 0;
+	for (f = list; f != 0; f = f->next) {
+		memcpy(fcb + 1, f->fn, sizeof(f->fn));
+		fcb[0] = remdrv + 1;
+		fcb[12] = 0;
+		fcb[32] = 0;
+		z = fsize(fcb);
+		if (z == -1) goto getout;
+		sz += z;
+	}
+	printf("Total: %d files, %uK\n", c, sz);
+getout:
+	ffree();
+}
+
 static csize(argc, argv)
 int argc;
 char **argv;
@@ -447,15 +490,11 @@ char **argv;
 	int sz;
 
 	if (getfcb(argv[1], fcb) != 0) {
-		printf("Wildcards not allowed\n");
+		msize(fcb);
 		return 0;
 	}
-	if (nsize(fcb) != 0) {
-		printf("Failled to get remote file size\n");
-		return 0;
-	}
-	sz = (fcb[33] >> 3) | (fcb[34] << 5) | (fcb[35] << 13);
-	if ((fcb[33] & 7) != 0) ++sz;
+	sz = fsize(fcb);
+	if (sz == -1) return 0;
 	printf("%s: %uK\n", argv[1], sz);
 }
 
@@ -628,7 +667,7 @@ static chelp() {
 	printf("ldir [<afn>]	list local files\n");
 	printf("get <rf> [<lf>]	get remote file(s) [to local file]\n");
 	printf("put <lf> [<rf>]	put local file(s) [to remote file]\n");
-	printf("size <rf>	show remote file size\n");
+	printf("size <afn>	show remote file(s) size\n");
 	printf("status		show ftp status\n");
 	printf("quit		disconnect and exit ftp\n");
 	printf("Where: <afn> = Ambiguous File Name (wildcards)\n");
