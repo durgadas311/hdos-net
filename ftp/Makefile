@@ -21,8 +21,8 @@ $(DK1)/%.rel: __FRC__
 
 #ftp.abs: ftp.rel $(DK1)/cnetfile.rel $(DK1)/wizcpnet.rel $(DK1)/wizio.rel $(DK1)/nvram.rel $(SY0)/printf.rel
 #	vhdos l80 dk0:ftp,dk1:cnetfile,dk1:wizcpnet,dk1:wizio,dk1:nvram,sy0:printf,sy0:stdlib/s,sy0:clibrary,dk0:ftp/n/e
-ftp.abs: ftp.rel $(DK1)/libwznet.rel $(SY0)/printf.rel
-	vhdos l80 dk0:ftp,dk1:libwznet,sy0:printf,sy0:stdlib/s,sy0:clibrary,dk0:ftp/n/e
+ftp.abs: ftp.rel libftp.rel $(DK1)/libwznet.rel $(SY0)/printf.rel
+	vhdos l80 dk0:ftp,dk0:libftp,dk1:libwznet,sy0:printf,sy0:stdlib/s,sy0:clibrary,dk0:ftp/n/e
 
 ship: ../bin/ftp.abs
 
