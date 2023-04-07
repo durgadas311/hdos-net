@@ -2,9 +2,9 @@
  * CP/NET operations on WIZnet (W5500)
  */
 
-#include "dk1:wizio.h"
-#include "dk1:w5500.h"
-#include "dk1:cpnet.h"
+#include "wizio.h"
+#include "w5500.h"
+#include "cpnet.h"
 
 int nwinit()
 {

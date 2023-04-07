@@ -1,7 +1,7 @@
 /*
  * Implementation of netfile.h using CP/NET (cpnet.h)
  */
-#include "dk1:cpnet.h"
+#include "cpnet.h"
 
 extern char remdrv; /* 0-15 == A:-P: */
 
