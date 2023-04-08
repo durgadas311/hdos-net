@@ -4,6 +4,9 @@
 
 #include "h8xspi.h"
 #include "w5500.h"
+#asm
+	NAME	('wizio')
+#endasm
 
 /*
  * Read byte from register 'bsb','off'.

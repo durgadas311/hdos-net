@@ -5,6 +5,9 @@
 #include "wizio.h"
 #include "w5500.h"
 #include "cpnet.h"
+#asm
+	NAME	('wizcpnet')
+#endasm
 
 int nwinit()
 {

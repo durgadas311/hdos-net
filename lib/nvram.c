@@ -3,6 +3,9 @@
  */
 
 #include "h8xspi.h"
+#asm
+	NAME	('nvram')
+#endasm
 
 #asm
 NVRD	equ	3	; chip READ command

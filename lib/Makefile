@@ -12,4 +12,4 @@ all: wizio.rel nvram.rel wizcpnet.rel cnetfile.rel
 	vhdos m80 =dk0:$*
 
 libwznet.rel: all
-	vcpm lib 'libwznet=cnetfile(),wizcpnet(),wizio(),nvram()'
+	vcpm lib 'libwznet=cnetfile,wizcpnet,wizio,nvram'

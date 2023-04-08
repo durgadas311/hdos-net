@@ -3,6 +3,10 @@
  */
 #include "cpnet.h"
 
+#asm
+	NAME	('cnetfile')
+#endasm
+
 extern char remdrv; /* 0-15 == A:-P: */
 
 static char cursid = 255;
