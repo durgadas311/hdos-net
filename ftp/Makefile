@@ -1,7 +1,7 @@
 # An ftp-like utilitiy for HDOS using H8xSPI/WIZnet.
 SY0 = $(shell VHDOSShow=sy0 vhdos)
 DK0 = $(PWD)
-DK1 = $(PWD)/../lib
+DK1 = $(dir $(PWD))lib
 
 export HDOSDrive_dk0 = $(DK0)
 export HDOSDrive_dk1 = $(DK1)
