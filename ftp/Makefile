@@ -24,6 +24,7 @@ ftppip.abs: ftppip.rel libftp.rel $(DK1)/libwznet.rel $(SY0)/printf.rel
 	vhdos l80 dk0:ftppip,dk0:libftp,dk1:libwznet,sy0:printf,sy0:stdlib/s,sy0:clibrary,dk0:ftppip/n/e
 
 ship: ../bin/ftp.abs ../bin/ftppip.abs
+	@cd ../bin; sum *.abs >../checksums
 
 ../bin/%: %
 	cp $< $@
