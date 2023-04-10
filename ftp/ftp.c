@@ -158,8 +158,13 @@ static cstatus() {
 		printf("Not connected, Local %s:\n", dev);
 		return 0;
 	}
-	printf("Server %02x, Remote %c:, Local %s:\n",
-		sid, 'A' + remdrv, dev);
+	if (nstat() != 0) {
+		printf("Lost connection to %02x\n", sid);
+		sid = 255;
+	} else {
+		printf("Server %02x, Remote %c:, Local %s:\n",
+			sid, 'A' + remdrv, dev);
+	}
 }
 
 static ccd(argc, argv)
@@ -435,7 +440,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.5\n");
+	printf("HDOS FTP-Lite version 0.6\n");
 	setctlc();
 	ninit();
 	if (argc > 1) {

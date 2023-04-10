@@ -42,6 +42,14 @@ int ndisc()
 	return ret;
 }
 
+/* returns 0 if connected, else -1 */
+int nstat() {
+	if (curbsb == 0) return -1;
+	if (nwstat(curbsb) == 0) return 0;
+	ndisc();
+	return -1;
+}
+
 static setup(fnc, siz)
 char fnc;
 int siz;
@@ -68,7 +76,7 @@ int siz;
 
 /* response is minimum message size */
 static int rcvsmp() {
-	rcvhdr(curbsb, cpnhdr, 0);
+	if (rcvhdr(curbsb, cpnhdr, 0) == -1) return -1;
 	return rcverr(cpnhdr[CPN_SIZ] + 1); /* should be 1 */
 }
 
@@ -76,7 +84,7 @@ static int rcvsmp() {
 static int rcvfcb(fcb)
 char *fcb;
 {
-	rcvhdr(curbsb, cpnhdr, 0);
+	if (rcvhdr(curbsb, cpnhdr, 0) == -1) return -1;
 	siz = cpnhdr[CPN_SIZ] + 1;
 	if (siz == 37) {
 		ret = rcvdat(curbsb, fcb, 36, 1);
@@ -93,7 +101,7 @@ char *buf;
 {
 	char dc;
 
-	rcvhdr(curbsb, cpnhdr, 0);
+	if (rcvhdr(curbsb, cpnhdr, 0) == -1) return -1;
 	siz = cpnhdr[CPN_SIZ] + 1;
 	if (cpnhdr[CPN_DAT] == 255) {
 		return rcverr(siz);
@@ -161,7 +169,7 @@ int len;
 		sndhdr(curbsb, cpnhdr, 0);
 		if (snddat(curbsb, fcb, 36, 1) == -1)
 			return -1;
-		rcvhdr(curbsb, cpnhdr, 0);
+		if (rcvhdr(curbsb, cpnhdr, 0) == -1) return -1;
 		siz = cpnhdr[CPN_SIZ] + 1;
 		if (siz == 165) {
 			ret = rcvdat(curbsb, fcb, 36, 0);
@@ -202,7 +210,7 @@ int len;
 		snddat(curbsb, fcb, 36, 0);
 		if (snddat(curbsb, buf, 128, 1) == -1)
 			return -1;
-		rcvhdr(curbsb, cpnhdr, 0);
+		if (rcvhdr(curbsb, cpnhdr, 0) == -1) return -1;
 		siz = cpnhdr[CPN_SIZ] + 1;
 		if (siz == 37) {
 			ret = rcvdat(curbsb, fcb, 36, 1);

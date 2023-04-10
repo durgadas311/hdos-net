@@ -9,6 +9,7 @@ extern int ndown(); /* (void) */
 
 extern int nconn(); /* (char sid) */
 extern int ndisc(); /* (void) */
+extern int nstat(); /* (void) */
 
 extern int ncreat(); /* (char *fcb) */
 extern int nopen(); /* (char *fcb) */

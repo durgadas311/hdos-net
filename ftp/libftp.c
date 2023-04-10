@@ -103,7 +103,7 @@ char *pat;
 
 	c = 0;
 	e = nfirst(pat, dskbuf);
-	while (e != 255) {
+	while (e != -1 && e != 255) {
 		e = (e & 3) * 32;
 		f = fnew(dskbuf + e + 1);
 		if (f == 0) {

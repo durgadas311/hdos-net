@@ -6,6 +6,8 @@ DK1 = $(dir $(PWD))lib
 export HDOSDrive_dk0 = $(DK0)
 export HDOSDrive_dk1 = $(DK1)
 
+.PRECIOUS: %.mac
+
 all: ftp.abs ftppip.abs
 
 %.mac: %.c

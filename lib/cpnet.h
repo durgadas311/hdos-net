@@ -12,7 +12,7 @@
 extern int nwinit(); /* (void) */
 extern int nwdown(); /* (void) */
 
-extern int nwstat(); /* (void) */
+extern int nwstat(); /* (char bsb) */
 extern int nwcid(); /* (void) */
 
 extern int nwopen(); /* (char sid) - opens socket to SID, returns bsb (handle) */

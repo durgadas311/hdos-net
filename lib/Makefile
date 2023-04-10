@@ -3,6 +3,8 @@ export HDOSDrive_dk0 = $(PWD)
 #export CPMDrive_D = $(PWD)
 #export CPMDefault = d:
 
+.PRECIOUS: %.mac
+
 all: wizio.rel nvram.rel wizcpnet.rel cnetfile.rel
 
 %.mac: %.c

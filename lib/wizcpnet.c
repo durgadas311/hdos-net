@@ -26,9 +26,16 @@ int nwcid()
 	return wzget1(0, CR_PMAG);
 }
 
-int nwstat()
+/* "0" for OK, else not connected (...) */
+int nwstat(bsb)
+char bsb;
 {
-	return 0;
+	char sr;
+
+	sr = wzget1(bsb, SN_SR);
+	if (sr == SS_ESTAB) return 0;
+	/* TODO: other status checks? */
+	return -1;
 }
 
 static int wzopen(bsb)
@@ -152,6 +159,7 @@ int add;
 
 	/* TODO: any init/setup on W5500? */
 	do {
+		if (nwstat(bsb) != 0) return -1;
 		/* TODO: timeout? */
 		ret = rcvdat(bsb, buf, CPN_DAT + 1 + add, 0);
 	} while (ret == 0);
