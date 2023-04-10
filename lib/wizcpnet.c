@@ -158,12 +158,29 @@ int add;
 	return ret; /* TODO: what if ret < CPN_DAT + 1 + add */
 }
 
+/*
+ * There appears to be a "bug" in the W5500 such that
+ * the SN_TXWR must only be written once per SC_SEND.
+ * Need to track progress of message to FIFO, then
+ * update SN_TXWR at end.
+ *
+ * Alternative to 'txoff' would be to try and mirror
+ * SN_TXWR and just use it directly (do not wzget2 each time).
+ * Hard to say which would be more reliable.
+ */
+static int txoff = 0;
+
 int sndend(bsb)
 char bsb;
 {
+	int txwr;
 	char ir;
 	int x;
 
+	txwr = wzget2(bsb, SN_TXWR);
+	txwr += txoff;
+	wzput2(bsb, SN_TXWR, txwr);
+	txoff = 0;
 	wzcmd(bsb, SC_SEND);
 	ir = x = wzist(bsb, (SI_SEND_OK|SI_TIMEOUT|SI_DISCON));
 	if (x == -1 || (ir & SI_SEND_OK) == 0) return -1;
@@ -186,9 +203,8 @@ char last;
 	fif = bsb + 1; /* TX is just +1 from SK */
 	txwr = wzget2(bsb, SN_TXWR);
 	/* TODO: check for overrun? not possible? */
-	wzwr(fif, txwr, buf, len);
-	txwr += len;
-	wzput2(bsb, SN_TXWR, txwr);
+	wzwr(fif, txwr + txoff, buf, len);
+	txoff += len;
 	if (last) {
 		if (sndend(bsb) != 0)
 			return -1;
@@ -205,6 +221,7 @@ char bsb;
 char *buf;
 int add;
 {
+	txoff = 0; /* paranoia */
 	/* TODO: any init/setup on W5500? flush recv? */
 	return snddat(bsb, buf, CPN_DAT + 1 + add, 0);
 }
