@@ -208,7 +208,7 @@ main(argc, argv)
 int argc;
 char **argv;
 {
-	printf("HDOS FTP-PIP version 0.6\n");
+	printf("HDOS FTP-PIP version 0.7\n");
 	if (argc != 2 || parse(argc, argv) != 0) {
 		help();
 		exit(1);

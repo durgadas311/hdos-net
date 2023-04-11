@@ -86,9 +86,21 @@ char bsb;
 	return 0;
 }
 
+/*
+ * Assuming the same anomaly as with SN_TXWR:
+ * cannot read current value of SN_RXRD until
+ * RECV command is executed.
+ */
+static int rxoff = 0;
+
 int rcvend(bsb)
 char bsb;
 {
+	int rxrd;
+
+	rxrd = wzget2(bsb, SN_RXRD) + rxoff;
+	wzput2(bsb, SN_RXRD, rxrd);
+	rxoff = 0;
 	wzcmd(bsb, SC_RECV);
 	return 0;
 }
@@ -109,12 +121,11 @@ int len;
 	char ir;
 
 	fif = bsb + 2; /* RX is just +2 from SK */
-	rsr = wzget2(bsb, SN_RXRSR);
+	rsr = wzget2(bsb, SN_RXRSR) - rxoff;
 	if (rsr > len) rsr = len;
-	rxrd = wzget2(bsb, SN_RXRD);
+	rxrd = wzget2(bsb, SN_RXRD) + rxoff;
 	wzrd(fif, rxrd, buf, rsr);
-	rxrd += rsr;
-	wzput2(bsb, SN_RXRD, rxrd);
+	rxoff += rsr;
 	rcvend(bsb);
 	return rsr;
 }
@@ -137,12 +148,11 @@ char last;
 	char ir;
 
 	fif = bsb + 2; /* RX is just +2 from SK */
-	rsr = wzget2(bsb, SN_RXRSR);
+	rsr = wzget2(bsb, SN_RXRSR) - rxoff;
 	if (rsr < len) return 0; /* not enough data, yet */
-	rxrd = wzget2(bsb, SN_RXRD);
+	rxrd = wzget2(bsb, SN_RXRD) + rxoff;
 	wzrd(fif, rxrd, buf, len);
-	rxrd += len;
-	wzput2(bsb, SN_RXRD, rxrd);
+	rxoff += len;
 	if (last) {
 		rcvend(bsb);
 	}
@@ -157,6 +167,7 @@ int add;
 {
 	int ret;
 
+	rxoff = 0; /* paranoia */
 	/* TODO: any init/setup on W5500? */
 	do {
 		if (nwstat(bsb) != 0) return -1;
@@ -167,10 +178,11 @@ int add;
 }
 
 /*
- * There appears to be a "bug" in the W5500 such that
- * the SN_TXWR must only be written once per SC_SEND.
- * Need to track progress of message to FIFO, then
- * update SN_TXWR at end.
+ * The W5500 has an odd behavior w.r.t. reading the SN_TXWR register.
+ * The value read is effectively SN_RXRD until the SEND command is
+ * executed. Intermediate values written to SN_TXWR are not visible.
+ * Need to track progress of message to FIFO independent of SN_TXWR,
+ * then update SN_TXWR at end.
  *
  * Alternative to 'txoff' would be to try and mirror
  * SN_TXWR and just use it directly (do not wzget2 each time).

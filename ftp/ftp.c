@@ -440,7 +440,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.6\n");
+	printf("HDOS FTP-Lite version 0.7\n");
 	setctlc();
 	ninit();
 	if (argc > 1) {
