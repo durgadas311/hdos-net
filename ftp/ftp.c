@@ -24,6 +24,21 @@ char *s2;
 	return *s2 - *s1;
 }
 
+/* anything other than "y" or "yes" returns -1 */
+static int getyn() {
+	int c;
+	int x;
+
+	x = 0;
+	while ((c = getchar()) != -1 && c != '\n') {
+		if (x < 4) gfn[x++] = toupper(c);
+	}
+	if (x != 1 && x != 3) return -1;
+	if (gfn[0] != 'Y') return -1;
+	if (x > 1 && gfn[1] != 'E' && gfn[2] != 'S') return -1;
+	return 0;
+}
+
 static getline(cc, cv)
 int *cc;
 char **cv;
@@ -347,6 +362,23 @@ char **argv;
 	fput(f, fcb);
 }
 
+static cdelete(argc, argv)
+int argc;
+char **argv;
+{
+	if (getfcb(argv[1], fcb) != 0) {
+		printf("Confirm: DELETE [%02x]%c:%s ? ",
+			sid, remdrv + 'A', argv[1]);
+		if (getyn() != 0) {
+			printf("Delete aborted\n");
+			return;
+		}
+	}
+	if (ndelete(fcb) != 0) {
+		printf("Failed to delete\n");
+	}
+}
+
 static chelp() {
 	printf("Usage: ftp [<sid>]\n");
 	printf("Commands:\n");
@@ -359,6 +391,7 @@ static chelp() {
 	printf("ldir [<afn>]	list local files\n");
 	printf("get <rf> [<lf>]	get remote file(s) [to local file]\n");
 	printf("put <lf> [<rf>]	put local file(s) [to remote file]\n");
+	printf("delete <afn>	delete remote file(s)\n");
 	printf("size <afn>	show remote file(s) size\n");
 	printf("status		show ftp status\n");
 	printf("quit		disconnect and exit ftp\n");
@@ -386,6 +419,7 @@ static struct cmds {
 	{"ldir", 0, cldir},
 	{"get", F_CON|F_ARG, cget},
 	{"put", F_CON|F_ARG, cput},
+	{"delete", F_CON|F_ARG, cdelete},
 	{0,0, 0}
 };
 
@@ -440,7 +474,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.7\n");
+	printf("HDOS FTP-Lite version 0.8\n");
 	setctlc();
 	ninit();
 	if (argc > 1) {
