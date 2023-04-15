@@ -13,12 +13,50 @@ int count = 0;
 
 char nvbuf[512];
 
-static int getnv() {
+static memset(ptr, val, len)
+char *ptr;
+char val;
+int len;
+{
+#asm
+	lxi	h,2
+	dad	sp
+	mov	c,m
+	inx	h
+	mov	b,m	; BC=len
+	inx	h
+	mov	a,m	; A=val
+	inx	h
+	inx	h
+	mov	e,m
+	inx	h
+	mov	d,m	; DE=ptr
+	xchg
+	mov	e,a
+ms0:	mov	m,e
+	inx	h
+	dcx	b
+	mov	a,b
+	ora	c
+	jnz	ms0
+#endasm
+}
+
+static int getnv(init)
+char init;
+{
 	if (nvget(nvbuf, 0, 512) != 0) {
+		printf("NVRAM read failure\n");
 		return 1;
 	}
 	if (vcksum(nvbuf) != 0) {
-		return 1;
+		if (init) {
+			printf("Initializing new NVRAM block\n");
+			memset(nvbuf, 255, 512);
+		} else {
+			printf("NVRAM not initialized\n");
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -334,6 +372,7 @@ static wzshow() {
 static nvshow() {
 	int x, y;
 
+	if (getnv(0) != 0) return;
 	xxshow();
 	count = 0;
 	y = 32;
@@ -357,7 +396,7 @@ static show() {
 }
 
 help() {
-	printf("WIZCFG version 1.5c\n");
+	printf("WIZCFG version 1.5d\n");
 	printf("Usage: WIZCFG {G|I|S} ipadr\n");
 	printf("       WIZCFG M macadr\n");
 	printf("       WIZCFG N cid\n");
@@ -381,15 +420,14 @@ char **argv;
 		direct = 1;
 		++x;
 	}
-	if (!direct) {
-		if (getnv() != 0) {
-			printf("NVRAM read failure\n");
-			exit(1);
-		}
-	}
 	if (x >= argc) {
 		show();
 		exit(0);
+	}
+	if (!direct) {
+		if (getnv(1) != 0) {
+			exit(1);
+		}
 	}
 	if (x < argc && argv[x][0] == 'R' && argv[x][1] == 0) {
 		/* the only command with no arguments */
