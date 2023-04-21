@@ -68,6 +68,7 @@ static cclose() {
 	sid = 255;
 }
 
+/* get lf from rf */
 static cget()
 {
 	if (getfcb(rf, fcb) != 0) {
@@ -82,6 +83,7 @@ static cget()
 	}
 }
 
+/* put lf to rf */
 static cput()
 {
 	if (getfcb(lf, fcb) != 0) {
@@ -90,10 +92,9 @@ static cput()
 		return;
 	}
 	if (rf) {
-		fget(rf, fcb);
-	} else {
-		fget(lf, fcb);
+		getfcb(rf, fcb);
 	}
+	fput(lf, fcb);
 }
 
 static help() {
@@ -208,7 +209,7 @@ main(argc, argv)
 int argc;
 char **argv;
 {
-	printf("HDOS FTP-PIP version 0.7\n");
+	printf("HDOS FTP-PIP version 0.9\n");
 	if (argc != 2 || parse(argc, argv) != 0) {
 		help();
 		exit(1);

@@ -330,36 +330,42 @@ char **argv;
 	printf("%s: %uK\n", argv[1], sz);
 }
 
+/* argv[1] is remote spec, argv[2] is local */
 static cget(argc, argv)
 int argc;
 char **argv;
 {
 	char *f;
 
-	if (getfcb(argv[1], fcb) != 0) {
-		/* TODO: error if argc > 2? */
+	f = argv[1];
+	if (argc > 2) {
+		if (afn(argv[2]) || getfcb(argv[1], fcb) != 0) {
+			printf("Wildcards not allowed\n");
+			return;
+		}
+		f = argv[2];
+	} else if (getfcb(argv[1], fcb) != 0) {
 		mget(fcb);
 		return;
 	}
-	if (argc > 2) f = argv[2];
-	else f = argv[1];
 	fget(f, fcb);
 }
 
+/* argv[1] is local spec, argv[2] is remote */
 static cput(argc, argv)
 int argc;
 char **argv;
 {
-	char *f;
-
-	if (getfcb(argv[1], fcb) != 0) {
-		/* TODO: error if argc > 2? */
+	if (argc > 2) {
+		if (afn(argv[1]) || getfcb(argv[2], fcb) != 0) {
+			printf("Wildcards not allowed\n");
+			return;
+		}
+	} else if (getfcb(argv[1], fcb) != 0) {
 		mput(fcb);
 		return;
 	}
-	if (argc > 2) f = argv[2];
-	else f = argv[1];
-	fput(f, fcb);
+	fput(argv[1], fcb);
 }
 
 static cdelete(argc, argv)
@@ -474,7 +480,7 @@ char **argv;
 {
 	int x;
 
-	printf("HDOS FTP-Lite version 0.8\n");
+	printf("HDOS FTP-Lite version 0.9\n");
 	setctlc();
 	ninit();
 	if (argc > 1) {

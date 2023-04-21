@@ -29,6 +29,16 @@ int len;
 	}
 }
 
+int afn(fn)
+char *fn;
+{
+	while (*fn) {
+		if (*fn == '?' || *fn == '*') return 1;
+		++fn;
+	}
+	return 0;
+}
+
 /*
  * Builds an FCB from a filename string.
  * handles wildcards, in which case returns 1.

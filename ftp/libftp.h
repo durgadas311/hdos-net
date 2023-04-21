@@ -11,6 +11,7 @@ extern fget(); /* (char *lf, char *fcb) */
 extern fput(); /* (char *lf, char *fcb) */
 extern mget(); /* (char *pat) */
 extern mput(); /* (char *pat) */
+extern int afn(); /* (char *fn) */
 extern int getfcb(); /* (char *fn, char *fcb) */
 extern stfile(); /* (char *str, char *ff) */
 extern memcpy(); /* (char *dst, char *src, int len) */
