@@ -175,10 +175,12 @@ done:
 	mvi	c,0	; blank-fill
 	call	dec16
 	call	crlf
+	xra	a
 	jmp	exet
 
 err:	mvi	h,LF
 	scall	error
+	mvi	a,1
 exet:	scall	exit
 	jmp	$
 
@@ -264,7 +266,7 @@ crlf:	mvi	a,CR
 	ret
 
 ; end of program code
-stack	equ	$+64
+stack	equ	$+128
 
 buf	equ	stack
 
